@@ -1,0 +1,10 @@
+Agritech — "Krishi-Vani AI" (Voice-First Multilingual Agricultural Agent)
+Theme: Agriculture & Rural + India-First Dataset Track
+
+Problem: Smallholder farmers often struggle to navigate complex government subsidies, market (mandi) price fluctuations, and crop disease remedies due to literacy barriers and regional dialect variations.
+
+Solution: A low-bandwidth, voice-first AI assistant integrated with WhatsApp/Telegram. Farmers can send voice notes in regional dialects (Hindi, Bhojpuri, Tamil, Marathi, etc.) to get instant advice on crop health, live mandi prices, and step-by-step subsidy eligibility.
+
+Open-Source LLM Role: Llama 3 (8B / 70B) fine-tuned or augmented via RAG (Retrieval-Augmented Generation) on official Indian agricultural datasets (ICAR/KVK open datasets via AIKosh) combined with speech translation pipelines (e.g., AI4Bharat / Bhashini).
+
+Option 2: Inclusive Healthcare —
