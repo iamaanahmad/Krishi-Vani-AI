@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Odia voice-and-photo rice crop triage demonstration with cited guidance and safe escalation.">
+    <meta name="description" content="Labelled-fixture demonstration of Odia rice triage with cited guidance and safe escalation.">
     <title>Krishi-Vani AI | ଧାନ ସହାୟକ</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" href="/fonts/noto-sans-oriya-400.ttf" as="font" type="font/ttf" crossorigin>
@@ -24,9 +24,9 @@
       <section class="hero shell" aria-labelledby="page-title">
         <div class="hero-copy">
           <p class="eyebrow">ଓଡ଼ିଆ · ଧାନ · ସୁରକ୍ଷିତ ପ୍ରଥମ ପଦକ୍ଷେପ</p>
-          <h1 id="page-title">ଫଟୋ ଏବଂ କଣ୍ଠସ୍ୱରରୁ<br><em>ଗୋଟିଏ ସ୍ପଷ୍ଟ ପଦକ୍ଷେପ</em></h1>
-          <p class="lede">ଧାନ ପତ୍ରର ଫଟୋ ଏବଂ ଓଡ଼ିଆ ପ୍ରଶ୍ନ ଦିଅନ୍ତୁ। ପ୍ରମାଣ ମେଳିଲେ ଉତ୍ସ ସହିତ ପରାମର୍ଶ, ନହେଲେ KVK କୁ ସୁରକ୍ଷିତ ଭାବେ ପଠାଇବୁ।</p>
-          <p class="translation">Add a rice-leaf photo and an Odia voice question. Get one cited next step, or a clear expert escalation when evidence is weak.</p>
+          <h1 id="page-title">ଲେବଲ୍ ଡେମୋରୁ<br><em>ଗୋଟିଏ ସୁରକ୍ଷିତ ପଦକ୍ଷେପ</em></h1>
+          <p class="lede">ଲେବଲ୍ ଥିବା ଡେମୋ ଅଡିଓ ଏବଂ ପତ୍ର ଚିତ୍ର ବାଛନ୍ତୁ। ପ୍ରମାଣ ମେଳିଲେ ଉତ୍ସ ସହିତ ଗୋଟିଏ ପଦକ୍ଷେପ, ନହେଲେ KVK କୁ ପଠାଇବୁ।</p>
+          <p class="translation">Run a labelled fixture pair to see one cited next step or a clear expert escalation. Farmer media is not interpreted yet.</p>
           <ul class="trust-list" aria-label="Safety promises">
             <li><span aria-hidden="true">✓</span> ଉତ୍ସ ସହିତ ଉତ୍ତର</li>
             <li><span aria-hidden="true">✓</span> ଔଷଧ ନିର୍ଦ୍ଦେଶ ନାହିଁ</li>
@@ -45,8 +45,8 @@
 
           <div class="guided-demo" aria-label="Guided judge demo">
             <div>
-              <strong>Guided judge demo</strong>
-              <span>Uses labelled synthetic fixtures</span>
+              <strong>Guided fixture demo</strong>
+              <span>Only the labelled fixture pairs are interpreted</span>
             </div>
             <div class="scenario" role="group" aria-label="Choose demonstration scenario">
               <button type="button" class="scenario-button active" data-scenario="supported" aria-pressed="true">Supported</button>
@@ -58,21 +58,17 @@
             <section class="input-card" aria-labelledby="voice-label">
               <div class="input-number">1</div>
               <div>
-                <h3 id="voice-label">କଣ୍ଠସ୍ୱର ପ୍ରଶ୍ନ</h3>
-                <p>Voice question · WAV, WebM, MP3</p>
-                <label class="file-label" for="audio-input">Choose audio</label>
-                <input id="audio-input" type="file" accept="audio/wav,audio/webm,audio/ogg,audio/mpeg">
-                <span class="file-state" id="audio-state">Guided sample ready</span>
+                <h3 id="voice-label">ଡେମୋ ଅଡିଓ · Demo audio</h3>
+                <p>Deterministic transport fixture, not recorded speech</p>
+                <span class="fixture-state">Included with this scenario</span>
               </div>
             </section>
             <section class="input-card" aria-labelledby="photo-label">
               <div class="input-number">2</div>
               <div>
-                <h3 id="photo-label">ଧାନ ପତ୍ର ଫଟୋ</h3>
-                <p>Leaf close-up · PNG, JPG, WebP</p>
-                <label class="file-label" for="image-input">Choose photo</label>
-                <input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
-                <span class="file-state" id="image-state">Guided sample ready</span>
+                <h3 id="photo-label">ପତ୍ର ଚିତ୍ର · Leaf illustration</h3>
+                <p>Labelled synthetic fixture, not a field photograph</p>
+                <span class="fixture-state">Included with this scenario</span>
               </div>
             </section>
           </div>
@@ -81,14 +77,14 @@
             <span>ଧାନ ଯାଞ୍ଚ କରନ୍ତୁ</span>
             <span aria-hidden="true">→</span>
           </button>
-          <p class="privacy-note">Files stay on this local demo server. This is triage, not a confirmed diagnosis.</p>
+          <p class="privacy-note">Fixture files stay on this local server. The prototype does not interpret arbitrary farmer media.</p>
         </div>
       </section>
 
       <section class="result-shell shell" id="result-region" aria-live="polite" hidden>
         <div class="result-topline">
           <div class="result-status" id="result-status"><span></span><strong></strong></div>
-          <div class="confidence"><span>Confidence</span><strong id="confidence-value"></strong></div>
+          <div class="evidence-gate"><span>Evidence gate</span><strong id="evidence-gate-value"></strong></div>
         </div>
         <div class="result-layout">
           <article class="answer-card">
@@ -96,7 +92,7 @@
             <h2 id="result-title"></h2>
             <p class="answer-en" id="result-title-en"></p>
             <div class="transcript-block">
-              <span>ଶୁଣାଗଲା · Heard</span>
+              <span>ଡେମୋ ଟ୍ରାନ୍ସକ୍ରିପ୍ଟ · Fixture transcript</span>
               <p id="transcript"></p>
             </div>
             <div class="safety-line"><span aria-hidden="true">◉</span><span id="safety-copy"></span></div>
@@ -116,7 +112,10 @@
 
       <footer class="shell">
         <span>Krishi-Vani AI · Open-source challenge prototype</span>
-        <a class="tin-credit" href="https://tin.computer"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#66DC9D"/></svg>Growth by Tin</a>
+        <span class="footer-links">
+          <a href="mailto:unleashllm@mail.tin.computer">Support</a>
+          <a class="tin-credit" href="https://tin.computer"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#66DC9D"/></svg>Growth by Tin</a>
+        </span>
       </footer>
     </main>
     <script src="/app.js" defer></script>

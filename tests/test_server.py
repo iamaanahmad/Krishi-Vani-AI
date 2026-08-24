@@ -56,6 +56,17 @@ class ServerTests(unittest.TestCase):
         self.assertIn("text/html", content_type)
         self.assertIn('lang="or"', page)
         self.assertEqual(page.count('class="primary-action"'), 1)
+        self.assertIn('href="mailto:unleashllm@mail.tin.computer"', page)
+        self.assertIn("Farmer media is not interpreted yet", page)
+        self.assertNotIn('type="file"', page)
+
+    def test_result_ui_does_not_present_fixture_score_as_accuracy(self) -> None:
+        status, _, data = self.request("GET", "/app.js")
+        script = data.decode()
+        self.assertEqual(status, 200)
+        self.assertIn('"Passed" : "Stopped"', script)
+        self.assertNotIn("Math.round(result.confidence", script)
+        self.assertIn('document.querySelector("#result-region").hidden = true', script)
 
     def test_client_analytics_has_small_activation_funnel(self) -> None:
         status, content_type, data = self.request("GET", "/app.js")
