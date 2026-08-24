@@ -447,6 +447,8 @@ def build_pipeline() -> TriagePipeline:
 
 
 def normalise_event_name(name: str) -> str:
+    if name == "$pageview":
+        return name
     if not re.fullmatch(r"[a-z][a-z0-9_]{2,63}", name):
         raise InputError("Invalid event name")
     return name

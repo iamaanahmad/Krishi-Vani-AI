@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import mimetypes
+import os
 import threading
 import time
 from http import HTTPStatus
@@ -46,6 +48,12 @@ class AppHandler(BaseHTTPRequestHandler):
             with EVENTS_LOCK:
                 events = [event for event in EVENTS if not run or event.get("e2e_run") == run]
             self._json(HTTPStatus.OK, {"events": events})
+            return
+        if parsed.path == "/robots.txt":
+            self._robots()
+            return
+        if parsed.path == "/sitemap.xml":
+            self._sitemap()
             return
         self._static(parsed.path)
 
@@ -121,9 +129,71 @@ class AppHandler(BaseHTTPRequestHandler):
             self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
             return
         content = target.read_bytes()
+        if target == PUBLIC / "index.html":
+            canonical_url = html.escape(f"{self._public_origin()}/", quote=True)
+            content = content.replace(b"__CANONICAL_URL__", canonical_url.encode("utf-8"))
         mime_type, _ = mimetypes.guess_type(target.name)
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", f"{mime_type or 'application/octet-stream'}; charset=utf-8")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(content)
+
+    def _public_origin(self) -> str:
+        configured = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+        if configured:
+            parsed = urlparse(configured)
+            if (
+                parsed.scheme in {"http", "https"}
+                and parsed.netloc
+                and not parsed.path
+                and not parsed.params
+                and not parsed.query
+                and not parsed.fragment
+                and parsed.username is None
+                and parsed.password is None
+            ):
+                return configured
+
+        forwarded_proto = self.headers.get("X-Forwarded-Proto", "").split(",", 1)[0].strip()
+        scheme = forwarded_proto if forwarded_proto in {"http", "https"} else "http"
+        forwarded_host = self.headers.get("X-Forwarded-Host", "").split(",", 1)[0].strip()
+        host = forwarded_host or self.headers.get("Host", "127.0.0.1").strip()
+        parsed = urlparse(f"{scheme}://{host}")
+        if (
+            parsed.netloc
+            and parsed.hostname
+            and parsed.username is None
+            and parsed.password is None
+            and parsed.path == ""
+        ):
+            return f"{scheme}://{parsed.netloc}"
+        return "http://127.0.0.1"
+
+    def _robots(self) -> None:
+        content = (
+            "User-agent: *\n"
+            "Allow: /\n"
+            "Disallow: /api/\n"
+            f"Sitemap: {self._public_origin()}/sitemap.xml\n"
+        ).encode("utf-8")
+        self._text(HTTPStatus.OK, "text/plain; charset=utf-8", content)
+
+    def _sitemap(self) -> None:
+        canonical_url = html.escape(f"{self._public_origin()}/")
+        content = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            f"  <url><loc>{canonical_url}</loc></url>\n"
+            "</urlset>\n"
+        ).encode("utf-8")
+        self._text(HTTPStatus.OK, "application/xml; charset=utf-8", content)
+
+    def _text(self, status: HTTPStatus, content_type: str, content: bytes) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -136,6 +206,8 @@ class AppHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(content)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Robots-Tag", "noindex, nofollow")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.end_headers()
         self.wfile.write(content)
 

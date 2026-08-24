@@ -27,11 +27,19 @@ class ServerTests(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join(timeout=2)
 
-    def request(self, method: str, path: str, payload: dict | None = None):
+    def request(
+        self,
+        method: str,
+        path: str,
+        payload: dict | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         body = json.dumps(payload).encode() if payload is not None else None
-        headers = {"Content-Type": "application/json"} if payload is not None else {}
-        connection.request(method, path, body=body, headers=headers)
+        request_headers = dict(headers or {})
+        if payload is not None:
+            request_headers["Content-Type"] = "application/json"
+        connection.request(method, path, body=body, headers=request_headers)
         response = connection.getresponse()
         data = response.read()
         connection.close()
@@ -50,7 +58,11 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(json.loads(data)["status"], "ok")
 
     def test_homepage_has_odia_and_single_primary_action(self) -> None:
-        status, content_type, data = self.request("GET", "/")
+        status, content_type, data = self.request(
+            "GET",
+            "/",
+            headers={"Host": "krishi-vani.example", "X-Forwarded-Proto": "https"},
+        )
         page = data.decode()
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
@@ -59,6 +71,9 @@ class ServerTests(unittest.TestCase):
         self.assertIn('href="mailto:unleashllm@mail.tin.computer"', page)
         self.assertIn("Farmer media is not interpreted yet", page)
         self.assertNotIn('type="file"', page)
+        self.assertIn('<meta name="robots" content="index, follow">', page)
+        self.assertIn('<link rel="canonical" href="https://krishi-vani.example/">', page)
+        self.assertNotIn("__CANONICAL_URL__", page)
 
     def test_result_ui_does_not_present_fixture_score_as_accuracy(self) -> None:
         status, _, data = self.request("GET", "/app.js")
@@ -74,8 +89,35 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("javascript", content_type)
         self.assertIn("/capture/", script)
-        for event_name in ("demo_loaded", "triage_submitted", "triage_completed", "triage_failed"):
+        for event_name in ("$pageview", "demo_loaded", "triage_submitted", "triage_completed", "triage_failed"):
             self.assertIn(f'track("{event_name}"', script)
+        self.assertIn("$process_person_profile: false", script)
+        self.assertIn("properties.is_e2e_test = true", script)
+        self.assertIn("properties.e2e_run = state.e2eRun", script)
+
+    def test_discovery_files_use_request_origin(self) -> None:
+        headers = {"Host": "krishi-vani.example", "X-Forwarded-Proto": "https"}
+        status, content_type, data = self.request("GET", "/robots.txt", headers=headers)
+        self.assertEqual(status, 200)
+        self.assertIn("text/plain", content_type)
+        self.assertEqual(
+            data.decode(),
+            "User-agent: *\nAllow: /\nDisallow: /api/\n"
+            "Sitemap: https://krishi-vani.example/sitemap.xml\n",
+        )
+
+        status, content_type, data = self.request("GET", "/sitemap.xml", headers=headers)
+        self.assertEqual(status, 200)
+        self.assertIn("application/xml", content_type)
+        self.assertIn("<loc>https://krishi-vani.example/</loc>", data.decode())
+
+    def test_api_responses_are_not_indexable(self) -> None:
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        connection.request("GET", "/api/health")
+        response = connection.getresponse()
+        response.read()
+        self.assertEqual(response.getheader("X-Robots-Tag"), "noindex, nofollow")
+        connection.close()
 
     def test_supported_api_case(self) -> None:
         status, _, data = self.request(

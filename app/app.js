@@ -8,6 +8,7 @@ const POSTHOG_CONFIG = Object.freeze({
   host: "https://us.i.posthog.com",
 });
 const POSTHOG_FUNNEL_EVENTS = new Set([
+  "$pageview",
   "demo_loaded",
   "triage_submitted",
   "triage_completed",
@@ -64,12 +65,17 @@ function posthogDistinctId() {
 }
 
 function capturePostHog(event, status) {
-  if (state.e2eRun || !POSTHOG_FUNNEL_EVENTS.has(event)) return;
+  if (!POSTHOG_FUNNEL_EVENTS.has(event)) return;
   const properties = {
     distinct_id: posthogDistinctId(),
     route: location.pathname,
+    $current_url: `${location.origin}${location.pathname}`,
     $process_person_profile: false,
   };
+  if (state.e2eRun) {
+    properties.is_e2e_test = true;
+    properties.e2e_run = state.e2eRun;
+  }
   if (status) properties.status = status;
   fetch(`${POSTHOG_CONFIG.host}/capture/`, {
     method: "POST",
@@ -199,6 +205,7 @@ fetch("/api/health")
   })
   .catch(() => {});
 
+track("$pageview");
 track("demo_loaded");
 
 // Deterministic browser proof mode for CI/review screenshots. It uses the same
