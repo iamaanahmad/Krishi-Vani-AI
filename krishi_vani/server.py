@@ -55,6 +55,9 @@ class AppHandler(BaseHTTPRequestHandler):
         if parsed.path == "/sitemap.xml":
             self._sitemap()
             return
+        if parsed.path == "/llms.txt":
+            self._llms()
+            return
         self._static(parsed.path)
 
     def do_POST(self) -> None:  # noqa: N802
@@ -130,8 +133,13 @@ class AppHandler(BaseHTTPRequestHandler):
             return
         content = target.read_bytes()
         if target == PUBLIC / "index.html":
-            canonical_url = html.escape(f"{self._public_origin()}/", quote=True)
+            public_origin = self._public_origin()
+            canonical_url = html.escape(f"{public_origin}/", quote=True)
             content = content.replace(b"__CANONICAL_URL__", canonical_url.encode("utf-8"))
+            content = content.replace(
+                b"__STRUCTURED_DATA__",
+                self._structured_data(public_origin).encode("utf-8"),
+            )
         mime_type, _ = mimetypes.guess_type(target.name)
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", f"{mime_type or 'application/octet-stream'}; charset=utf-8")
@@ -190,6 +198,94 @@ class AppHandler(BaseHTTPRequestHandler):
             "</urlset>\n"
         ).encode("utf-8")
         self._text(HTTPStatus.OK, "application/xml; charset=utf-8", content)
+
+    def _llms(self) -> None:
+        content = (
+            "# Krishi-Vani AI\n\n"
+            "> Open-source, offline-capable challenge prototype for Odia rice triage "
+            "using two labelled demo fixture pairs.\n\n"
+            f"- Canonical demo: {self._public_origin()}/\n"
+            "- Source code: https://github.com/iamaanahmad/Krishi-Vani-AI\n\n"
+            "## Verified demo behavior\n\n"
+            "- Recognizes only the two bundled labelled audio-and-leaf fixture pairs.\n"
+            "- Returns one cited, non-chemical next step when curated evidence matches.\n"
+            "- Stops and recommends KVK or agricultural extension review when evidence is weak.\n\n"
+            "## Boundaries\n\n"
+            "- Does not interpret arbitrary farmer recordings or photographs.\n"
+            "- Does not provide a confirmed diagnosis or pesticide or fungicide instructions.\n"
+            "- AIKosh, AI4Bharat/Bhashini, messaging, mandi, and subsidy integrations are not connected.\n"
+        ).encode("utf-8")
+        self._text(HTTPStatus.OK, "text/plain; charset=utf-8", content)
+
+    @staticmethod
+    def _structured_data(public_origin: str) -> str:
+        canonical_url = f"{public_origin}/"
+        repository_url = "https://github.com/iamaanahmad/Krishi-Vani-AI"
+        data = {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "Organization",
+                    "@id": f"{canonical_url}#organization",
+                    "name": "Krishi-Vani AI project",
+                    "alternateName": "Krishi-Vani AI",
+                    "url": canonical_url,
+                    "sameAs": [repository_url],
+                    "description": "Open-source challenge prototype project for transparent Odia rice triage.",
+                },
+                {
+                    "@type": "SoftwareApplication",
+                    "@id": f"{canonical_url}#software",
+                    "name": "Krishi-Vani AI",
+                    "url": canonical_url,
+                    "applicationCategory": "EducationalApplication",
+                    "operatingSystem": "Python 3.11+ and a modern browser",
+                    "inLanguage": ["or", "en"],
+                    "description": (
+                        "Open-source labelled-fixture demonstration of Odia rice triage "
+                        "with cited guidance and safe escalation."
+                    ),
+                    "sameAs": [repository_url],
+                    "license": "https://opensource.org/license/mit",
+                    "isAccessibleForFree": True,
+                    "author": {"@id": f"{canonical_url}#organization"},
+                    "featureList": [
+                        "Two bundled labelled audio-and-leaf fixture scenarios",
+                        "Cited non-chemical next step when curated evidence matches",
+                        "Confidence-aware KVK or agricultural extension escalation",
+                    ],
+                },
+                {
+                    "@type": "FAQPage",
+                    "@id": f"{canonical_url}#faq",
+                    "mainEntity": [
+                        {
+                            "@type": "Question",
+                            "name": "Can it interpret farmer media?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": (
+                                    "No. Farmer media is not interpreted yet; "
+                                    "only two bundled fixtures are recognized."
+                                ),
+                            },
+                        },
+                        {
+                            "@type": "Question",
+                            "name": "Does it diagnose or prescribe chemicals?",
+                            "acceptedAnswer": {
+                                "@type": "Answer",
+                                "text": (
+                                    "No. It returns one non-chemical step or stops "
+                                    "for KVK/extension review."
+                                ),
+                            },
+                        },
+                    ],
+                },
+            ],
+        }
+        return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
 
     def _text(self, status: HTTPStatus, content_type: str, content: bytes) -> None:
         self.send_response(status)
