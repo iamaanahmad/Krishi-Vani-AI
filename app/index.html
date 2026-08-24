@@ -6,6 +6,7 @@
     <meta name="description" content="Labelled-fixture demonstration of Odia rice triage with cited guidance and safe escalation.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="__CANONICAL_URL__">
+    <script type="application/ld+json">__STRUCTURED_DATA__</script>
     <title>Krishi-Vani AI | ଧାନ ସହାୟକ</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="preload" href="/fonts/noto-sans-oriya-400.ttf" as="font" type="font/ttf" crossorigin>
@@ -28,7 +29,7 @@
           <p class="eyebrow">ଓଡ଼ିଆ · ଧାନ · ସୁରକ୍ଷିତ ପ୍ରଥମ ପଦକ୍ଷେପ</p>
           <h1 id="page-title">ଲେବଲ୍ ଡେମୋରୁ<br><em>ଗୋଟିଏ ସୁରକ୍ଷିତ ପଦକ୍ଷେପ</em></h1>
           <p class="lede">ଲେବଲ୍ ଥିବା ଡେମୋ ଅଡିଓ ଏବଂ ପତ୍ର ଚିତ୍ର ବାଛନ୍ତୁ। ପ୍ରମାଣ ମେଳିଲେ ଉତ୍ସ ସହିତ ଗୋଟିଏ ପଦକ୍ଷେପ, ନହେଲେ KVK କୁ ପଠାଇବୁ।</p>
-          <p class="translation">Run a labelled fixture pair to see one cited next step or a clear expert escalation. Farmer media is not interpreted yet.</p>
+          <p class="translation">Run a labelled fixture pair to see one cited next step or a clear expert escalation.</p>
           <ul class="trust-list" aria-label="Safety promises">
             <li><span aria-hidden="true">✓</span> ଉତ୍ସ ସହିତ ଉତ୍ତର</li>
             <li><span aria-hidden="true">✓</span> ଔଷଧ ନିର୍ଦ୍ଦେଶ ନାହିଁ</li>
@@ -79,8 +80,18 @@
             <span>ଧାନ ଯାଞ୍ଚ କରନ୍ତୁ</span>
             <span aria-hidden="true">→</span>
           </button>
-          <p class="privacy-note">Fixture files stay on this local server. The prototype does not interpret arbitrary farmer media.</p>
         </div>
+      </section>
+
+      <section class="faq-strip shell" aria-label="Prototype questions">
+        <details>
+          <summary>Can it interpret farmer media? <span>No, not yet.</span></summary>
+          <p>No. Farmer media is not interpreted yet; only two bundled fixtures are recognized.</p>
+        </details>
+        <details>
+          <summary>Does it diagnose or prescribe chemicals?</summary>
+          <p>No. It returns one non-chemical step or stops for KVK/extension review.</p>
+        </details>
       </section>
 
       <section class="result-shell shell" id="result-region" aria-live="polite" hidden>

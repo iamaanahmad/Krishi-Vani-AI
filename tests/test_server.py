@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import http.client
 import json
+import re
 import threading
 import unittest
 from pathlib import Path
@@ -74,6 +75,39 @@ class ServerTests(unittest.TestCase):
         self.assertIn('<meta name="robots" content="index, follow">', page)
         self.assertIn('<link rel="canonical" href="https://krishi-vani.example/">', page)
         self.assertNotIn("__CANONICAL_URL__", page)
+        self.assertNotIn("__STRUCTURED_DATA__", page)
+
+    def test_homepage_structured_data_is_valid_and_matches_visible_copy(self) -> None:
+        status, _, data = self.request(
+            "GET",
+            "/",
+            headers={"Host": "krishi-vani.example", "X-Forwarded-Proto": "https"},
+        )
+        page = data.decode()
+        match = re.search(
+            r'<script type="application/ld\+json">(.*?)</script>',
+            page,
+            flags=re.DOTALL,
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNotNone(match)
+        structured_data = json.loads(match.group(1))
+        self.assertEqual(structured_data["@context"], "https://schema.org")
+        entities = {entity["@type"]: entity for entity in structured_data["@graph"]}
+        self.assertEqual(
+            set(entities),
+            {"Organization", "SoftwareApplication", "FAQPage"},
+        )
+        self.assertEqual(entities["Organization"]["url"], "https://krishi-vani.example/")
+        self.assertEqual(
+            entities["SoftwareApplication"]["sameAs"],
+            ["https://github.com/iamaanahmad/Krishi-Vani-AI"],
+        )
+        self.assertNotIn("offers", entities["SoftwareApplication"])
+        self.assertNotIn("aggregateRating", entities["SoftwareApplication"])
+        for question in entities["FAQPage"]["mainEntity"]:
+            self.assertIn(question["name"], page)
+            self.assertIn(question["acceptedAnswer"]["text"], page)
 
     def test_result_ui_does_not_present_fixture_score_as_accuracy(self) -> None:
         status, _, data = self.request("GET", "/app.js")
@@ -110,6 +144,14 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("application/xml", content_type)
         self.assertIn("<loc>https://krishi-vani.example/</loc>", data.decode())
+
+        status, content_type, data = self.request("GET", "/llms.txt", headers=headers)
+        self.assertEqual(status, 200)
+        self.assertIn("text/plain", content_type)
+        llms_text = data.decode()
+        self.assertIn("Canonical demo: https://krishi-vani.example/", llms_text)
+        self.assertIn("https://github.com/iamaanahmad/Krishi-Vani-AI", llms_text)
+        self.assertIn("Does not interpret arbitrary farmer recordings or photographs", llms_text)
 
     def test_api_responses_are_not_indexable(self) -> None:
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
