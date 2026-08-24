@@ -57,6 +57,15 @@ class ServerTests(unittest.TestCase):
         self.assertIn('lang="or"', page)
         self.assertEqual(page.count('class="primary-action"'), 1)
 
+    def test_client_analytics_has_small_activation_funnel(self) -> None:
+        status, content_type, data = self.request("GET", "/app.js")
+        script = data.decode()
+        self.assertEqual(status, 200)
+        self.assertIn("javascript", content_type)
+        self.assertIn("/capture/", script)
+        for event_name in ("demo_loaded", "triage_submitted", "triage_completed", "triage_failed"):
+            self.assertIn(f'track("{event_name}"', script)
+
     def test_supported_api_case(self) -> None:
         status, _, data = self.request(
             "POST",

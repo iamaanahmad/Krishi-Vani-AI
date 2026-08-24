@@ -5,6 +5,19 @@ const state = {
   e2eRun: new URLSearchParams(location.search).get("e2e_run") || "",
 };
 
+const POSTHOG_CONFIG = Object.freeze({
+  publicKey: "phc_xZyv8A2BbbYbfAc88biumDotz5AszK3VxrUMmCBubea2",
+  host: "https://us.i.posthog.com",
+});
+const POSTHOG_FUNNEL_EVENTS = new Set([
+  "demo_loaded",
+  "triage_submitted",
+  "triage_completed",
+  "triage_failed",
+]);
+const POSTHOG_DISTINCT_ID_KEY = "krishi_vani_posthog_distinct_id";
+let sessionDistinctId = "";
+
 const fixturePaths = {
   supported: {
     audio: "/fixtures/odia_brown_spot_question.wav",
@@ -45,7 +58,43 @@ async function fixturePayload(path) {
   };
 }
 
+function posthogDistinctId() {
+  if (sessionDistinctId) return sessionDistinctId;
+  try {
+    sessionDistinctId = localStorage.getItem(POSTHOG_DISTINCT_ID_KEY) || "";
+    if (!sessionDistinctId) {
+      sessionDistinctId = globalThis.crypto?.randomUUID?.()
+        || `anonymous-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem(POSTHOG_DISTINCT_ID_KEY, sessionDistinctId);
+    }
+  } catch (_) {
+    sessionDistinctId = `anonymous-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+  return sessionDistinctId;
+}
+
+function capturePostHog(event, status) {
+  if (state.e2eRun || !POSTHOG_FUNNEL_EVENTS.has(event)) return;
+  const properties = {
+    distinct_id: posthogDistinctId(),
+    route: location.pathname,
+    $process_person_profile: false,
+  };
+  if (status) properties.status = status;
+  fetch(`${POSTHOG_CONFIG.host}/capture/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: POSTHOG_CONFIG.publicKey,
+      event,
+      properties,
+    }),
+    keepalive: true,
+  }).catch(() => {});
+}
+
 async function track(event, status = "") {
+  capturePostHog(event, status);
   try {
     await fetch("/api/events", {
       method: "POST",
