@@ -2,8 +2,6 @@
 
 Krishi-Vani AI is a narrow, offline-capable challenge prototype for Odia rice triage. Two labelled audio-and-image fixture pairs demonstrate either one cited, non-chemical next step or a clear KVK/extension escalation.
 
-![Krishi-Vani AI interface](docs/krishi-vani-demo-preview.png)
-
 ## Run in one command
 
 Python 3.11+ is the only requirement.
