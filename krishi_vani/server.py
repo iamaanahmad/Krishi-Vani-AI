@@ -26,6 +26,37 @@ ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "app"
 EVENTS: list[dict[str, object]] = []
 EVENTS_LOCK = threading.Lock()
+EVENT_PROPERTY_ALLOWLIST = {
+    "$pageview": set(),
+    "demo_loaded": set(),
+    "triage_submitted": {"scenario"},
+    "triage_completed": {"outcome"},
+    "triage_failed": {"stage"},
+    "value_reached": {"outcome"},
+    "error_shown": {"stage"},
+    "empty_state_shown": {"surface"},
+    "feedback_submitted": {"rating", "feedback"},
+}
+
+
+def sanitise_event_properties(name: str, value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    approved = EVENT_PROPERTY_ALLOWLIST.get(name, set()) | {"route"}
+    properties: dict[str, str] = {}
+    for key in approved:
+        raw = value.get(key, "")
+        if not isinstance(raw, str):
+            continue
+        limit = 280 if key == "feedback" else 120 if key == "route" else 40
+        clean = raw.strip()[:limit]
+        if clean:
+            properties[key] = clean
+    if name == "feedback_submitted" and properties.get("rating") not in {"thumbs_up", "thumbs_down"}:
+        properties.pop("rating", None)
+    if "route" in properties and not properties["route"].startswith("/"):
+        properties.pop("route", None)
+    return properties
 
 
 class AppHandler(BaseHTTPRequestHandler):
@@ -106,11 +137,13 @@ class AppHandler(BaseHTTPRequestHandler):
         try:
             payload = self._read_json()
             name = normalise_event_name(str(payload.get("event", "")))
+            if name not in EVENT_PROPERTY_ALLOWLIST:
+                raise InputError("Event is not approved")
             event = {
                 "event": name,
                 "e2e_run": str(payload.get("e2e_run", ""))[:80],
                 "is_e2e_test": bool(payload.get("is_e2e_test", False)),
-                "status": str(payload.get("status", ""))[:40],
+                "properties": sanitise_event_properties(name, payload.get("properties")),
                 "timestamp": time.time(),
             }
             with EVENTS_LOCK:

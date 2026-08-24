@@ -7,15 +7,20 @@ const POSTHOG_CONFIG = Object.freeze({
   publicKey: "phc_xZyv8A2BbbYbfAc88biumDotz5AszK3VxrUMmCBubea2",
   host: "https://us.i.posthog.com",
 });
-const POSTHOG_FUNNEL_EVENTS = new Set([
-  "$pageview",
-  "demo_loaded",
-  "triage_submitted",
-  "triage_completed",
-  "triage_failed",
-]);
+const ANALYTICS_SCHEMA = Object.freeze({
+  "$pageview": [],
+  demo_loaded: [],
+  triage_submitted: ["scenario"],
+  triage_completed: ["outcome"],
+  triage_failed: ["stage"],
+  value_reached: ["outcome"],
+  error_shown: ["stage"],
+  empty_state_shown: ["surface"],
+  feedback_submitted: ["rating", "feedback"],
+});
 const POSTHOG_DISTINCT_ID_KEY = "krishi_vani_posthog_distinct_id";
 let sessionDistinctId = "";
+let selectedFeedbackRating = "";
 
 const fixturePaths = {
   supported: {
@@ -64,40 +69,62 @@ function posthogDistinctId() {
   return sessionDistinctId;
 }
 
-function capturePostHog(event, status) {
-  if (!POSTHOG_FUNNEL_EVENTS.has(event)) return;
-  const properties = {
-    distinct_id: posthogDistinctId(),
-    route: location.pathname,
-    $current_url: `${location.origin}${location.pathname}`,
+function approvedProperties(event, properties = {}) {
+  const approved = ANALYTICS_SCHEMA[event];
+  if (!approved) return null;
+  const clean = { route: location.pathname };
+  approved.forEach((key) => {
+    if (typeof properties[key] !== "string") return;
+    const limit = key === "feedback" ? 280 : 40;
+    const value = properties[key].trim().slice(0, limit);
+    if (value) clean[key] = value;
+  });
+  if (event === "feedback_submitted" && !["thumbs_up", "thumbs_down"].includes(clean.rating)) {
+    delete clean.rating;
+  }
+  return clean;
+}
+
+function capturePostHog(event, properties) {
+  const clean = approvedProperties(event, properties);
+  if (!clean) return;
+  const eventProperties = {
+    ...clean,
     $process_person_profile: false,
   };
   if (state.e2eRun) {
-    properties.is_e2e_test = true;
-    properties.e2e_run = state.e2eRun;
+    eventProperties.is_e2e_test = true;
+    eventProperties.e2e_run = state.e2eRun;
   }
-  if (status) properties.status = status;
+  if (globalThis.posthog?.capture) {
+    globalThis.posthog.capture(event, eventProperties);
+    return;
+  }
+  const fallbackProperties = {
+    distinct_id: posthogDistinctId(),
+    ...eventProperties,
+  };
   fetch(`${POSTHOG_CONFIG.host}/capture/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       api_key: POSTHOG_CONFIG.publicKey,
       event,
-      properties,
+      properties: fallbackProperties,
     }),
     keepalive: true,
   }).catch(() => {});
 }
 
-async function track(event, status = "") {
-  capturePostHog(event, status);
+async function track(event, properties = {}) {
+  capturePostHog(event, properties);
   try {
     await fetch("/api/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         event,
-        status,
+        properties: approvedProperties(event, properties) || {},
         is_e2e_test: Boolean(state.e2eRun),
         e2e_run: state.e2eRun,
       }),
@@ -105,6 +132,33 @@ async function track(event, status = "") {
   } catch (_) {
     // Analytics must never block the local crop-triage result.
   }
+}
+
+function initialisePostHog() {
+  if (!globalThis.posthog?.init) return;
+  globalThis.posthog.init(POSTHOG_CONFIG.publicKey, {
+    api_host: POSTHOG_CONFIG.host,
+    ui_host: "https://us.posthog.com",
+    defaults: "2026-01-30",
+    person_profiles: "identified_only",
+    autocapture: false,
+    capture_pageview: false,
+    capture_pageleave: false,
+    capture_exceptions: false,
+    disable_surveys: true,
+    capture_performance: false,
+    enable_recording_console_log: false,
+    disable_session_recording: false,
+    rageclick: true,
+    capture_dead_clicks: true,
+    session_recording: {
+      maskAllInputs: true,
+      maskTextSelector: ".ph-mask",
+      blockSelector: "audio, video, canvas, .ph-no-capture",
+      recordCrossOriginIframes: false,
+      collectFonts: false,
+    },
+  });
 }
 
 document.querySelectorAll(".scenario-button").forEach((button) => {
@@ -116,7 +170,6 @@ document.querySelectorAll(".scenario-button").forEach((button) => {
       candidate.classList.toggle("active", active);
       candidate.setAttribute("aria-pressed", String(active));
     });
-    track("fixture_selected", state.scenario);
   });
 });
 
@@ -153,6 +206,7 @@ function renderResult(result) {
     const empty = document.createElement("p");
     empty.textContent = "No evidence was strong enough to cite. The system stopped safely.";
     citations.append(empty);
+    track("empty_state_shown", { surface: "citations" });
   }
 
   const adapters = document.querySelector("#adapters");
@@ -165,17 +219,58 @@ function renderResult(result) {
     adapters.append(term, description);
   });
   region.hidden = false;
+  resetFeedbackPrompt();
+  track("value_reached", { outcome: result.status });
   if (!new URLSearchParams(location.search).has("proof")) {
     region.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
+
+function resetFeedbackPrompt() {
+  selectedFeedbackRating = "";
+  document.querySelectorAll("[data-rating]").forEach((button) => {
+    button.disabled = false;
+    button.setAttribute("aria-pressed", "false");
+  });
+  document.querySelector("#feedback-comment").value = "";
+  document.querySelector("#feedback-form").hidden = true;
+  document.querySelector("#feedback-thanks").hidden = true;
+  document.querySelector("#feedback-prompt").hidden = false;
+}
+
+document.querySelectorAll("[data-rating]").forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedFeedbackRating = button.dataset.rating;
+    document.querySelectorAll("[data-rating]").forEach((candidate) => {
+      candidate.setAttribute("aria-pressed", String(candidate === button));
+    });
+    document.querySelector("#feedback-form").hidden = false;
+    document.querySelector("#feedback-comment").focus();
+  });
+});
+
+document.querySelector("#feedback-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!["thumbs_up", "thumbs_down"].includes(selectedFeedbackRating)) return;
+  const submit = event.currentTarget.querySelector('button[type="submit"]');
+  submit.disabled = true;
+  const feedback = document.querySelector("#feedback-comment").value.trim().slice(0, 280);
+  await track("feedback_submitted", {
+    rating: selectedFeedbackRating,
+    feedback,
+  });
+  document.querySelector("#feedback-form").hidden = true;
+  document.querySelectorAll("[data-rating]").forEach((button) => { button.disabled = true; });
+  document.querySelector("#feedback-thanks").hidden = false;
+  submit.disabled = false;
+});
 
 document.querySelector("#triage-button").addEventListener("click", async () => {
   const button = document.querySelector("#triage-button");
   const original = button.innerHTML;
   button.disabled = true;
   button.querySelector("span").textContent = "ଯାଞ୍ଚ ଚାଲିଛି…";
-  await track("triage_submitted", state.scenario);
+  await track("triage_submitted", { scenario: state.scenario });
   try {
     const selected = fixturePaths[state.scenario];
     const audio = await fixturePayload(selected.audio);
@@ -188,10 +283,11 @@ document.querySelector("#triage-button").addEventListener("click", async () => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Triage failed");
     renderResult(result);
-    await track("triage_completed", result.status);
+    await track("triage_completed", { outcome: result.status });
   } catch (error) {
     alert(error.message);
-    await track("triage_failed", "error");
+    await track("error_shown", { stage: "triage" });
+    await track("triage_failed", { stage: "triage" });
   } finally {
     button.disabled = false;
     button.innerHTML = original;
@@ -205,6 +301,7 @@ fetch("/api/health")
   })
   .catch(() => {});
 
+initialisePostHog();
 track("$pageview");
 track("demo_loaded");
 
