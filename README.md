@@ -30,20 +30,24 @@ The demo is intentionally explicit about its boundaries:
 | Odia speech recognition | Deterministic SHA-matched fixture adapter | AI4Bharat/Bhashini adapter is not connected or claimed |
 | Rice image triage | Deterministic SHA-matched fixture adapter | AIKosh-trained vision adapter is not connected or claimed |
 | Retrieval and citations | Real retrieval from a small curated ICAR/IRRI knowledge file | Replace with a licensed, versioned Odia corpus |
-| Response generation | Deterministic grounded adapter by default | Optional local Llama 3 through Ollama is fully implemented |
+| Response generation | Deterministic grounded adapter by default | Local Llama 3.2 1B through Ollama is implemented and verified |
 | Safety | Real confidence threshold, citation validation, chemical-prescription guard and KVK escalation | Extend with agronomist-reviewed policies and monitoring |
 
 The included SVGs are labelled synthetic illustrations, not AIKosh images. The WAVs are deterministic audio transport fixtures, not recordings or synthetic speech. This keeps the repository reproducible without misrepresenting unavailable datasets or model access.
 
 ## Use local Llama 3
 
-Install [Ollama](https://ollama.com/), make a Llama 3-family model available locally, then run:
+Install [Ollama](https://ollama.com/), then pull and verify the tested model:
 
 ```bash
-OLLAMA_MODEL=llama3.1:8b KRISHI_LLM_MODE=ollama ./demo.sh
+ollama pull llama3.2:1b
+python3 -m scripts.verify_ollama --model llama3.2:1b --timeout 180
+OLLAMA_MODEL=llama3.2:1b KRISHI_LLM_MODE=ollama OLLAMA_TIMEOUT_SECONDS=180 ./demo.sh
 ```
 
-The model receives the Odia transcript, vision cues, and retrieved evidence. It must return strict bilingual JSON with known citation IDs and exactly one non-chemical next step. Unknown citations, unsafe advice, invalid JSON, or a local model failure trigger the validated deterministic fallback. No paid API or cloud credential is required.
+The model receives the fixture transcript, vision cues, and retrieved evidence. It generates the grounded English summary and reason and selects citation IDs under a strict JSON schema. The application adds reviewed Odia wording and the single safe next step before validating the complete response. Unknown citations, unsafe advice, invalid JSON, wrong-language farmer guidance, or a local model failure trigger the deterministic safe fallback. No paid API or cloud credential is required.
+
+The repeatable measured run, exact model metadata, relevant output, and evidence boundary are recorded in [the Ollama proof](docs/OLLAMA_PROOF.md).
 
 ## Safety boundary
 

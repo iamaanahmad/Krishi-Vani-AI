@@ -19,6 +19,12 @@ MAX_FILE_BYTES = 8 * 1024 * 1024
 SUPPORTED_AUDIO_TYPES = {"audio/wav", "audio/x-wav", "audio/webm", "audio/ogg", "audio/mpeg"}
 SUPPORTED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp", "image/svg+xml"}
 ABSTAIN_THRESHOLD = 0.72
+DEFAULT_OLLAMA_MODEL = "llama3.2:1b"
+DEFAULT_OLLAMA_TIMEOUT_SECONDS = 180.0
+SAFE_SUMMARY_OR = "ଏହା ବ୍ରାଉନ୍ ସ୍ପଟ୍ ଭଳି ଦେଖାଯାଉଛି, କିନ୍ତୁ ଫଟୋରୁ ନିଶ୍ଚିତ ରୋଗ ନିର୍ଣ୍ଣୟ ନୁହେଁ।"
+SAFE_NEXT_STEP_OR = "ଆଜି ୫ଟି ପ୍ରଭାବିତ ପତ୍ରରେ ଗୋଲ କିମ୍ବା ଅଣ୍ଡାକାର ଓ ମଝି ଧୂସର ଥିବା ଦାଗ ଯାଞ୍ଚ କରନ୍ତୁ।"
+SAFE_NEXT_STEP_EN = "Inspect five affected leaves today for round or oval spots with grey centres."
+SAFE_WHY_OR = "ଏହି ଲକ୍ଷଣ ବ୍ରାଉନ୍ ସ୍ପଟ୍ ସହ ମେଳ ଖାଏ, ଏବଂ ସରକାରୀ ଓ ଧାନ ଜ୍ଞାନ ସ୍ରୋତ ସମତୁଳିତ ପୋଷକ ଓ ଜଳ ପରିଚାଳନାକୁ ସୁପାରିଶ କରେ।"
 
 # This is intentionally conservative. The demo never generates a chemical prescription.
 BANNED_PRESCRIPTION_TERMS = {
@@ -197,11 +203,11 @@ class DeterministicGroundedGenerator:
     ) -> dict[str, Any]:
         citation_ids = [item.citation_id for item in evidence]
         return {
-            "summary_or": "ଏହା ବ୍ରାଉନ୍ ସ୍ପଟ୍ ଭଳି ଦେଖାଯାଉଛି, କିନ୍ତୁ ଫଟୋରୁ ନିଶ୍ଚିତ ରୋଗ ନିର୍ଣ୍ଣୟ ନୁହେଁ।",
+            "summary_or": SAFE_SUMMARY_OR,
             "summary_en": "This resembles a brown-spot pattern, but a photo alone cannot confirm the diagnosis.",
-            "next_step_or": "ଆଜି ୫ଟି ପ୍ରଭାବିତ ପତ୍ର ଯାଞ୍ଚ କରନ୍ତୁ: ଦାଗ ଗୋଲ କିମ୍ବା ଅଣ୍ଡାକାର ଏବଂ ମଝି ଧୂସର କି ନାହିଁ ଲେଖି ରଖନ୍ତୁ; ଜଳ ଓ ସାରର ସମତୁଳନ ମଧ୍ୟ ଯାଞ୍ଚ କରନ୍ତୁ।",
-            "next_step_en": "Inspect five affected leaves today. Record whether spots are round or oval with grey centres, and check water and nutrient balance.",
-            "why_or": "ଏହି ଲକ୍ଷଣ ବ୍ରାଉନ୍ ସ୍ପଟ୍ ସହ ମେଳ ଖାଏ, ଏବଂ ସରକାରୀ ଓ ଧାନ ଜ୍ଞାନ ସ୍ରୋତ ସମତୁଳିତ ପୋଷକ ଓ ଜଳ ପରିଚାଳନାକୁ ସୁପାରିଶ କରେ।",
+            "next_step_or": SAFE_NEXT_STEP_OR,
+            "next_step_en": SAFE_NEXT_STEP_EN,
+            "why_or": SAFE_WHY_OR,
             "why_en": "The visible pattern matches published brown-spot cues; official rice guidance prioritises balanced nutrition and water management.",
             "citations": citation_ids,
         }
@@ -210,9 +216,15 @@ class DeterministicGroundedGenerator:
 class OllamaLlamaGenerator:
     name = "ollama-llama-grounded"
 
-    def __init__(self, model: str, base_url: str = "http://127.0.0.1:11434") -> None:
+    def __init__(
+        self,
+        model: str,
+        base_url: str = "http://127.0.0.1:11434",
+        timeout_seconds: float = DEFAULT_OLLAMA_TIMEOUT_SECONDS,
+    ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
+        self.timeout_seconds = timeout_seconds
 
     def generate(
         self,
@@ -220,14 +232,22 @@ class OllamaLlamaGenerator:
         vision: VisionResult,
         evidence: list[Evidence],
     ) -> dict[str, Any]:
-        evidence_payload = [asdict(item) for item in evidence]
+        evidence_payload = [
+            {
+                "citation_id": item.citation_id,
+                "excerpt_en": item.excerpt_en,
+                "excerpt_or": item.excerpt_or,
+            }
+            for item in evidence
+        ]
         prompt = (
             "You are a cautious rice crop triage assistant for an Odia-speaking farmer. "
-            "Use only the EVIDENCE JSON below. Return strict JSON with keys summary_or, "
-            "summary_en, next_step_or, next_step_en, why_or, why_en, citations. Give exactly "
-            "one non-chemical observation or crop-management next step. Never prescribe a "
-            "pesticide, fungicide, dose, or product. Say the result is not a confirmed diagnosis. "
-            "Every factual claim must be supported by citation IDs from the evidence.\n\n"
+            "Use only the EVIDENCE JSON below and return only the required JSON object. Generate the "
+            "English summary and reason from the supplied evidence, and select only citation IDs "
+            "supplied below. The application adds reviewed Odia wording and one safe next step after "
+            "your grounded response passes validation. Never prescribe a pesticide, fungicide, dose, "
+            "or product. The English summary must say this is not a confirmed diagnosis. Every factual "
+            "claim must be supported by citation IDs from the evidence.\n\n"
             f"TRANSCRIPT_ODIA: {speech.transcript_or}\n"
             f"VISION: {json.dumps(asdict(vision), ensure_ascii=False)}\n"
             f"EVIDENCE: {json.dumps(evidence_payload, ensure_ascii=False)}"
@@ -236,9 +256,36 @@ class OllamaLlamaGenerator:
             {
                 "model": self.model,
                 "stream": False,
-                "format": "json",
+                "format": {
+                    "type": "object",
+                    "properties": {
+                        "summary_en": {
+                            "type": "string",
+                            "description": "English summary saying this is not a confirmed diagnosis",
+                        },
+                        "why_en": {
+                            "type": "string",
+                            "description": "English reason grounded in the evidence",
+                        },
+                        "citations": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [item.citation_id for item in evidence],
+                            },
+                            "minItems": 1,
+                            "uniqueItems": True,
+                        },
+                    },
+                    "required": [
+                        "summary_en",
+                        "why_en",
+                        "citations",
+                    ],
+                    "additionalProperties": False,
+                },
                 "messages": [{"role": "user", "content": prompt}],
-                "options": {"temperature": 0},
+                "options": {"temperature": 0, "seed": 0, "num_predict": 256},
             }
         ).encode()
         request = urllib.request.Request(
@@ -248,10 +295,29 @@ class OllamaLlamaGenerator:
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=45) as response:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
                 payload = json.loads(response.read())
-            return json.loads(payload["message"]["content"])
-        except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError) as exc:
+            generation = json.loads(payload["message"]["content"])
+            if not isinstance(generation, dict):
+                raise ValueError("Ollama response content must be a JSON object")
+            allowed_model_fields = {"summary_en", "why_en", "citations"}
+            if not set(generation).issubset(allowed_model_fields):
+                raise ValueError("Ollama response contains fields outside the grounded schema")
+            return {
+                **generation,
+                "summary_or": SAFE_SUMMARY_OR,
+                "next_step_or": SAFE_NEXT_STEP_OR,
+                "next_step_en": SAFE_NEXT_STEP_EN,
+                "why_or": SAFE_WHY_OR,
+            }
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            TypeError,
+            ValueError,
+            KeyError,
+            json.JSONDecodeError,
+        ) as exc:
             raise RuntimeError(f"Local Ollama generation failed: {exc}") from exc
 
 
@@ -272,6 +338,21 @@ def _validate_generation(generation: dict[str, Any], evidence: list[Evidence]) -
     }
     if not required.issubset(generation):
         raise ValueError("Generator response is missing required grounded fields")
+    text_fields = required - {"citations"}
+    if any(not isinstance(generation[field], str) or not generation[field].strip() for field in text_fields):
+        raise ValueError("Generator response contains an empty or non-text grounded field")
+    if any(not re.search(r"[\u0b00-\u0b7f]", generation[field]) for field in ("summary_or", "next_step_or", "why_or")):
+        raise ValueError("Generator returned English instead of Odia-script farmer guidance")
+    summary_en = generation["summary_en"].lower()
+    if "diagnos" not in summary_en or not any(
+        boundary in summary_en for boundary in ("not", "cannot", "can't")
+    ):
+        raise ValueError("Generator omitted the unconfirmed-diagnosis boundary")
+    for field in ("next_step_or", "next_step_en"):
+        next_step = generation[field].strip()
+        sentences = [part for part in re.split(r"[.!?।]+", next_step) if part.strip()]
+        if len(sentences) != 1 or "\n" in next_step or ";" in next_step or "next steps" in next_step.lower():
+            raise ValueError("Generator returned more than one next step")
     allowed = {item.citation_id for item in evidence}
     citations = generation.get("citations")
     if not isinstance(citations, list) or not citations or not set(citations).issubset(allowed):
@@ -351,9 +432,17 @@ class TriagePipeline:
 
 def build_pipeline() -> TriagePipeline:
     mode = os.getenv("KRISHI_LLM_MODE", "deterministic").lower()
-    model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+    model = os.getenv("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL)
+    try:
+        timeout_seconds = float(
+            os.getenv("OLLAMA_TIMEOUT_SECONDS", str(DEFAULT_OLLAMA_TIMEOUT_SECONDS))
+        )
+    except ValueError:
+        timeout_seconds = DEFAULT_OLLAMA_TIMEOUT_SECONDS
     if mode == "ollama":
-        return TriagePipeline(OllamaLlamaGenerator(model=model))
+        return TriagePipeline(
+            OllamaLlamaGenerator(model=model, timeout_seconds=timeout_seconds)
+        )
     return TriagePipeline(DeterministicGroundedGenerator())
 
 

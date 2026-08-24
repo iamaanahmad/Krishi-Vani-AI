@@ -30,19 +30,19 @@ Show that confidence drops below `0.72`, no citation is fabricated, and the answ
 
 ## 3:50–5:10 — meaningful Llama 3 role
 
-Open `krishi_vani/core.py` at `OllamaLlamaGenerator`. Explain that local Llama 3 receives the Odia transcript, vision cues, and retrieved evidence, then produces strict bilingual JSON. Citation IDs are checked against retrieval, chemical prescriptions are rejected, and failures fall back safely.
+Open `krishi_vani/core.py` at `OllamaLlamaGenerator`. Explain that local Llama 3 receives the fixture transcript, vision cues, and retrieved evidence, then generates a grounded English summary and reason plus citation selection under a strict JSON schema. The application adds reviewed Odia wording and one safe next step. Citation IDs are checked against retrieval, chemical prescriptions are rejected, and failures fall back safely.
 
 If Ollama and a model are already available, restart with:
 
 ```bash
-OLLAMA_MODEL=llama3.1:8b KRISHI_LLM_MODE=ollama ./demo.sh
+OLLAMA_MODEL=llama3.2:1b KRISHI_LLM_MODE=ollama OLLAMA_TIMEOUT_SECONDS=180 ./demo.sh
 ```
 
 Do not pull a model during the judged demo.
 
 ## 5:10–6:10 — engineering proof
 
-Run `make check`. Call out the automated coverage for input validation, evidence grounding, citation integrity, abstention, unsafe model output, the API, and E2E event read-back.
+Run `make check`. Call out the automated coverage for input validation, evidence grounding, citation integrity, abstention, invalid JSON, wrong-language output, unsafe chemical advice, model failure, the API, and E2E event read-back. The real-model evidence is reproducible with `python3 -m scripts.verify_ollama` and recorded in `docs/OLLAMA_PROOF.md`.
 
 ## 6:10–6:40 — production path
 
