@@ -24,14 +24,17 @@ The default speech and vision adapters identify the exact committed fixtures by 
 
 ## Open-source LLM path
 
-Set `KRISHI_LLM_MODE=ollama` to use a local Llama 3-family model through Ollama's `/api/chat` interface. The model is used for the core synthesis task: turn retrieved evidence and multimodal adapter outputs into a short Odia/English response.
+Set `KRISHI_LLM_MODE=ollama` to use a local Llama 3-family model through Ollama's `/api/chat` interface. The verified adapter uses Llama for grounded English synthesis and citation selection. It then adds reviewed Odia wording and one policy-controlled next step before validating the complete bilingual result.
 
 The generator is constrained in four layers:
 
-1. temperature zero and strict JSON mode;
-2. a prompt that allows only supplied evidence and one non-chemical action;
-3. citation IDs must be non-empty and a subset of retrieved documents;
-4. chemical prescription terms force a safe deterministic fallback.
+1. temperature zero and a strict JSON schema;
+2. only the compact retrieved excerpts and their citation IDs enter the model prompt;
+3. reviewed Odia wording and the one safe action are added by application policy;
+4. citation IDs must be non-empty and a subset of retrieved documents;
+5. invalid JSON, wrong-language farmer guidance, chemical prescription terms, timeouts, and model failures force a safe deterministic fallback.
+
+See [`OLLAMA_PROOF.md`](OLLAMA_PROOF.md) for the exact verified model, command, output, latency, and limitations.
 
 ## Production adapter seams
 

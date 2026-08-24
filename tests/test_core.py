@@ -3,7 +3,9 @@ from __future__ import annotations
 import base64
 import json
 import unittest
+import urllib.error
 from pathlib import Path
+from unittest.mock import patch
 
 from krishi_vani.core import (
     BANNED_PRESCRIPTION_TERMS,
@@ -92,28 +94,109 @@ class PipelineTests(unittest.TestCase):
 
 
 class LlamaSafetyTests(unittest.TestCase):
-    def test_invalid_llama_citations_fall_back_to_grounded_demo(self) -> None:
-        class UnsafeGenerator:
-            name = "unsafe-test-generator"
+    @staticmethod
+    def valid_generation(citations: list[str]) -> dict[str, object]:
+        return {
+            "summary_or": "ଏହା ନିଶ୍ଚିତ ରୋଗ ନିର୍ଣ୍ଣୟ ନୁହେଁ।",
+            "summary_en": "This is not a confirmed diagnosis.",
+            "next_step_or": "ପାଞ୍ଚଟି ପତ୍ର ଯାଞ୍ଚ କରନ୍ତୁ।",
+            "next_step_en": "Inspect five leaves.",
+            "why_or": "ଦାଗଗୁଡ଼ିକ ଗୋଲ।",
+            "why_en": "The spots are round.",
+            "citations": citations,
+        }
 
-            def generate(self, speech, vision, evidence):
-                return {
-                    "summary_or": "x",
-                    "summary_en": "x",
-                    "next_step_or": "x",
-                    "next_step_en": "Spray a fungicide",
-                    "why_or": "x",
-                    "why_en": "x",
-                    "citations": ["MADE-UP"],
-                }
-
-        pipeline = TriagePipeline(UnsafeGenerator())
-        result = pipeline.triage(
+    @staticmethod
+    def run_supported(generator) -> dict[str, object]:
+        pipeline = TriagePipeline(generator)
+        return pipeline.triage(
             upload("odia_brown_spot_question.wav", "audio/wav"),
             upload("rice_brown_spot.svg", "image/svg+xml"),
         )
+
+    def assert_safe_fallback(self, result: dict[str, object], reason: str) -> None:
         self.assertEqual(result["adapters"]["generator"], "deterministic-grounded-demo")
-        self.assertIn("fallback_reason", result)
+        self.assertIn(reason, result["fallback_reason"])
+        self.assertTrue(result["citations"])
+
+    def test_invalid_json_from_ollama_falls_back_safely(self) -> None:
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return json.dumps({"message": {"content": "not JSON"}}).encode()
+
+        generator = OllamaLlamaGenerator("llama3.2:1b", timeout_seconds=1)
+        with patch("urllib.request.urlopen", return_value=FakeResponse()):
+            result = self.run_supported(generator)
+        self.assert_safe_fallback(result, "Local Ollama generation failed")
+
+    def test_unknown_llama_citation_falls_back_safely(self) -> None:
+        parent = self
+
+        class UnknownCitationGenerator:
+            name = "unknown-citation-test-generator"
+
+            def generate(self, speech, vision, evidence):
+                return parent.valid_generation(["MADE-UP"])
+
+        result = self.run_supported(UnknownCitationGenerator())
+        self.assert_safe_fallback(result, "missing or unknown citations")
+
+    def test_unsafe_chemical_advice_falls_back_safely(self) -> None:
+        parent = self
+
+        class ChemicalGenerator:
+            name = "chemical-test-generator"
+
+            def generate(self, speech, vision, evidence):
+                generation = parent.valid_generation([evidence[0].citation_id])
+                generation["next_step_en"] = "Spray a fungicide"
+                return generation
+
+        result = self.run_supported(ChemicalGenerator())
+        self.assert_safe_fallback(result, "chemical-prescription safety boundary")
+
+    def test_english_in_odia_field_falls_back_safely(self) -> None:
+        parent = self
+
+        class WrongLanguageGenerator:
+            name = "wrong-language-test-generator"
+
+            def generate(self, speech, vision, evidence):
+                generation = parent.valid_generation([evidence[0].citation_id])
+                generation["next_step_or"] = "Inspect five leaves."
+                return generation
+
+        result = self.run_supported(WrongLanguageGenerator())
+        self.assert_safe_fallback(result, "English instead of Odia-script")
+
+    def test_missing_diagnosis_boundary_falls_back_safely(self) -> None:
+        parent = self
+
+        class OverconfidentGenerator:
+            name = "overconfident-test-generator"
+
+            def generate(self, speech, vision, evidence):
+                generation = parent.valid_generation([evidence[0].citation_id])
+                generation["summary_en"] = "This is rice brown spot."
+                return generation
+
+        result = self.run_supported(OverconfidentGenerator())
+        self.assert_safe_fallback(result, "unconfirmed-diagnosis boundary")
+
+    def test_model_failure_falls_back_safely(self) -> None:
+        generator = OllamaLlamaGenerator("llama3.2:1b", timeout_seconds=1)
+        with patch(
+            "urllib.request.urlopen",
+            side_effect=urllib.error.URLError("model unavailable"),
+        ):
+            result = self.run_supported(generator)
+        self.assert_safe_fallback(result, "Local Ollama generation failed")
 
     def test_ollama_prompt_binds_generation_to_evidence(self) -> None:
         source = (ROOT / "data" / "knowledge.json").read_text(encoding="utf-8")
