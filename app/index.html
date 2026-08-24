@@ -104,11 +104,28 @@
             <p class="step-label">One next step</p>
             <h2 id="result-title"></h2>
             <p class="answer-en" id="result-title-en"></p>
-            <div class="transcript-block">
+            <div class="transcript-block ph-mask">
               <span>ଡେମୋ ଟ୍ରାନ୍ସକ୍ରିପ୍ଟ · Fixture transcript</span>
               <p id="transcript"></p>
             </div>
             <div class="safety-line"><span aria-hidden="true">◉</span><span id="safety-copy"></span></div>
+            <section class="feedback-prompt" id="feedback-prompt" aria-labelledby="feedback-title">
+              <div class="feedback-question">
+                <strong id="feedback-title">Was this result useful?</strong>
+                <div class="feedback-rating" role="group" aria-label="Rate this result">
+                  <button type="button" data-rating="thumbs_up" aria-label="Useful result" aria-pressed="false">👍</button>
+                  <button type="button" data-rating="thumbs_down" aria-label="Not useful result" aria-pressed="false">👎</button>
+                </div>
+              </div>
+              <form id="feedback-form" hidden>
+                <label for="feedback-comment">Anything we should improve? <span>Optional</span></label>
+                <div class="feedback-entry">
+                  <textarea id="feedback-comment" class="ph-mask" maxlength="280" rows="2"></textarea>
+                  <button type="submit">Send feedback</button>
+                </div>
+              </form>
+              <span class="feedback-thanks" id="feedback-thanks" hidden>Thank you. Your feedback was sent.</span>
+            </section>
           </article>
           <aside class="evidence-card" aria-labelledby="evidence-title">
             <p class="step-label">Grounding</p>
@@ -131,6 +148,7 @@
         </span>
       </footer>
     </main>
+    <script src="https://us-assets.i.posthog.com/static/array.js" defer></script>
     <script src="/app.js" defer></script>
   </body>
 </html>

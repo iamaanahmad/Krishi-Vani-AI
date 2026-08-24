@@ -77,6 +77,16 @@ class ServerTests(unittest.TestCase):
         self.assertNotIn("__CANONICAL_URL__", page)
         self.assertNotIn("__STRUCTURED_DATA__", page)
 
+    def test_result_has_one_compact_feedback_prompt(self) -> None:
+        status, _, data = self.request("GET", "/")
+        page = data.decode()
+        self.assertEqual(status, 200)
+        self.assertEqual(page.count('id="feedback-prompt"'), 1)
+        self.assertEqual(page.count('data-rating="thumbs_up"'), 1)
+        self.assertEqual(page.count('data-rating="thumbs_down"'), 1)
+        self.assertIn('id="feedback-form" hidden', page)
+        self.assertIn('class="ph-mask" maxlength="280"', page)
+
     def test_homepage_structured_data_is_valid_and_matches_visible_copy(self) -> None:
         status, _, data = self.request(
             "GET",
@@ -124,10 +134,37 @@ class ServerTests(unittest.TestCase):
         self.assertIn("javascript", content_type)
         self.assertIn("/capture/", script)
         for event_name in ("$pageview", "demo_loaded", "triage_submitted", "triage_completed", "triage_failed"):
-            self.assertIn(f'track("{event_name}"', script)
+            self.assertIn(event_name, script)
         self.assertIn("$process_person_profile: false", script)
-        self.assertIn("properties.is_e2e_test = true", script)
-        self.assertIn("properties.e2e_run = state.e2eRun", script)
+        self.assertIn("eventProperties.is_e2e_test = true", script)
+        self.assertIn("eventProperties.e2e_run = state.e2eRun", script)
+
+    def test_client_analytics_covers_first_contact_and_masks_replay(self) -> None:
+        status, _, data = self.request("GET", "/app.js")
+        script = data.decode()
+        self.assertEqual(status, 200)
+        for event_name in ("value_reached", "error_shown", "empty_state_shown", "feedback_submitted"):
+            self.assertIn(event_name, script)
+        self.assertIn('person_profiles: "identified_only"', script)
+        self.assertIn("maskAllInputs: true", script)
+        self.assertIn('maskTextSelector: ".ph-mask"', script)
+        self.assertIn('blockSelector: "audio, video, canvas, .ph-no-capture"', script)
+        self.assertIn("capture_performance: false", script)
+        self.assertIn("enable_recording_console_log: false", script)
+        self.assertIn("disable_session_recording: false", script)
+        self.assertIn("rageclick: true", script)
+        self.assertIn("capture_dead_clicks: true", script)
+        self.assertNotIn(".identify(", script)
+
+    def test_feedback_behavior_caps_comment_and_submits_once(self) -> None:
+        status, _, data = self.request("GET", "/app.js")
+        script = data.decode()
+        self.assertEqual(status, 200)
+        self.assertIn('.value.trim().slice(0, 280)', script)
+        self.assertIn('document.querySelector("#feedback-form").hidden = false', script)
+        self.assertIn('document.querySelector("#feedback-form").hidden = true', script)
+        self.assertIn("button.disabled = true", script)
+        self.assertIn('document.querySelector("#feedback-thanks").hidden = false', script)
 
     def test_discovery_files_use_request_origin(self) -> None:
         headers = {"Host": "krishi-vani.example", "X-Forwarded-Proto": "https"}
@@ -187,7 +224,12 @@ class ServerTests(unittest.TestCase):
         status, _, _ = self.request(
             "POST",
             "/api/events",
-            {"event": "triage_completed", "is_e2e_test": True, "e2e_run": run, "status": "supported"},
+            {
+                "event": "triage_completed",
+                "is_e2e_test": True,
+                "e2e_run": run,
+                "properties": {"route": "/", "outcome": "supported"},
+            },
         )
         self.assertEqual(status, 202)
         status, _, data = self.request("GET", f"/api/events?run={run}")
@@ -195,6 +237,38 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(len(events), 1)
         self.assertTrue(events[0]["is_e2e_test"])
+        self.assertEqual(events[0]["properties"], {"route": "/", "outcome": "supported"})
+
+    def test_feedback_event_keeps_only_deliberate_approved_fields(self) -> None:
+        with EVENTS_LOCK:
+            EVENTS.clear()
+        status, _, _ = self.request(
+            "POST",
+            "/api/events",
+            {
+                "event": "feedback_submitted",
+                "properties": {
+                    "route": "/",
+                    "rating": "thumbs_down",
+                    "feedback": "x" * 320,
+                    "transcript": "private transcript",
+                    "image": "private crop",
+                    "identity": "farmer@example.com",
+                },
+            },
+        )
+        self.assertEqual(status, 202)
+        with EVENTS_LOCK:
+            properties = EVENTS[-1]["properties"]
+        self.assertEqual(set(properties), {"route", "rating", "feedback"})
+        self.assertEqual(len(properties["feedback"]), 280)
+
+    def test_unapproved_event_is_rejected(self) -> None:
+        status, _, data = self.request(
+            "POST", "/api/events", {"event": "crop_uploaded", "properties": {"route": "/"}}
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("not approved", json.loads(data)["error"])
 
 
 if __name__ == "__main__":
