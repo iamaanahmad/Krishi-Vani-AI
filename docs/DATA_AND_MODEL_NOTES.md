@@ -11,8 +11,8 @@ The application links to the publisher page for every record and shows the citat
 
 ## Not included
 
-- No AIKosh images or corpus files are bundled.
-- No AI4Bharat or Bhashini model/API is connected.
+- No external image dataset or corpus files are bundled.
+- No real speech-recognition or vision model/API is connected.
 - No Llama weights are bundled or downloaded automatically.
 - No diagnostic accuracy claim is made from the synthetic fixtures.
 

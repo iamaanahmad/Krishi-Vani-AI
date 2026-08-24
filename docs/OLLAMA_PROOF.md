@@ -74,4 +74,4 @@ The uncertain fixture remains below the `0.72` confidence threshold, returns no 
 
 ## Honest evidence boundary
 
-The real Llama model performs a narrow role: it receives the deterministic fixture transcript, deterministic vision cues, and two curated ICAR/IRRI excerpts, then generates the English summary and reason and selects citations under a JSON schema. Application policy supplies the reviewed Odia wording and the single safe observation step before final validation. This run does not prove Odia generation quality, real ASR, real vision, AIKosh use, agronomic accuracy, field latency, or farmer readiness.
+The real Llama model performs a narrow role: it receives the deterministic fixture transcript, deterministic vision cues, and two curated ICAR/IRRI excerpts, then generates the English summary and reason and selects citations under a JSON schema. Application policy supplies the reviewed Odia wording and the single safe observation step before final validation. This run does not prove Odia generation quality, real ASR, real vision, external dataset use, agronomic accuracy, field latency, or farmer readiness.

@@ -1,7 +1,5 @@
 const state = {
   scenario: "supported",
-  audio: null,
-  image: null,
   e2eRun: new URLSearchParams(location.search).get("e2e_run") || "",
 };
 
@@ -37,14 +35,6 @@ function encodeBase64(buffer) {
     binary += String.fromCharCode(...bytes.subarray(index, index + chunk));
   }
   return btoa(binary);
-}
-
-async function filePayload(file) {
-  return {
-    name: file.name,
-    type: file.type,
-    base64: encodeBase64(await file.arrayBuffer()),
-  };
 }
 
 async function fixturePayload(path) {
@@ -114,30 +104,15 @@ async function track(event, status = "") {
 document.querySelectorAll(".scenario-button").forEach((button) => {
   button.addEventListener("click", () => {
     state.scenario = button.dataset.scenario;
-    state.audio = null;
-    state.image = null;
+    document.querySelector("#result-region").hidden = true;
     document.querySelectorAll(".scenario-button").forEach((candidate) => {
       const active = candidate === button;
       candidate.classList.toggle("active", active);
       candidate.setAttribute("aria-pressed", String(active));
     });
-    document.querySelector("#audio-input").value = "";
-    document.querySelector("#image-input").value = "";
-    document.querySelector("#audio-state").textContent = "Guided sample ready";
-    document.querySelector("#image-state").textContent = "Guided sample ready";
     track("fixture_selected", state.scenario);
   });
 });
-
-function bindFileInput(id, stateKey, labelId) {
-  document.querySelector(id).addEventListener("change", (event) => {
-    state[stateKey] = event.target.files[0] || null;
-    document.querySelector(labelId).textContent = state[stateKey]?.name || "Guided sample ready";
-  });
-}
-
-bindFileInput("#audio-input", "audio", "#audio-state");
-bindFileInput("#image-input", "image", "#image-state");
 
 function citationMarkup(item) {
   const link = document.createElement("a");
@@ -156,8 +131,8 @@ function renderResult(result) {
   const region = document.querySelector("#result-region");
   const status = document.querySelector("#result-status");
   status.className = `result-status ${result.status}`;
-  status.querySelector("strong").textContent = result.status === "supported" ? "Evidence-supported triage" : "Expert check needed";
-  document.querySelector("#confidence-value").textContent = `${Math.round(result.confidence * 100)}%`;
+  status.querySelector("strong").textContent = result.status === "supported" ? "Fixture evidence matched" : "Expert check needed";
+  document.querySelector("#evidence-gate-value").textContent = result.status === "supported" ? "Passed" : "Stopped";
   document.querySelector("#result-title").textContent = result.next_step_or;
   document.querySelector("#result-title-en").textContent = result.next_step_en;
   document.querySelector("#transcript").textContent = result.transcript_or || result.transcript_en;
@@ -184,7 +159,9 @@ function renderResult(result) {
     adapters.append(term, description);
   });
   region.hidden = false;
-  region.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!new URLSearchParams(location.search).has("proof")) {
+    region.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 document.querySelector("#triage-button").addEventListener("click", async () => {
@@ -195,8 +172,8 @@ document.querySelector("#triage-button").addEventListener("click", async () => {
   await track("triage_submitted", state.scenario);
   try {
     const selected = fixturePaths[state.scenario];
-    const audio = state.audio ? await filePayload(state.audio) : await fixturePayload(selected.audio);
-    const image = state.image ? await filePayload(state.image) : await fixturePayload(selected.image);
+    const audio = await fixturePayload(selected.audio);
+    const image = await fixturePayload(selected.image);
     const response = await fetch("/api/triage", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

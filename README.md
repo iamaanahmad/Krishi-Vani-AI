@@ -1,6 +1,6 @@
 # Krishi-Vani AI
 
-Krishi-Vani AI is a narrow, offline-capable challenge prototype for an Odia-speaking rice farmer. It accepts a voice file and rice-leaf image, then returns either one cited, non-chemical next step or a clear KVK/extension escalation.
+Krishi-Vani AI is a narrow, offline-capable challenge prototype for Odia rice triage. Two labelled audio-and-image fixture pairs demonstrate either one cited, non-chemical next step or a clear KVK/extension escalation.
 
 ![Krishi-Vani AI interface](docs/krishi-vani-demo-preview.png)
 
@@ -24,16 +24,16 @@ make check
 
 The demo is intentionally explicit about its boundaries:
 
-| Part | Demo status | Production path |
+| Part | Demo status | Not yet implemented |
 |---|---|---|
-| Audio and image upload | Real local browser-to-server transport | Same contract can accept mobile/WhatsApp media later |
-| Odia speech recognition | Deterministic SHA-matched fixture adapter | AI4Bharat/Bhashini adapter is not connected or claimed |
-| Rice image triage | Deterministic SHA-matched fixture adapter | AIKosh-trained vision adapter is not connected or claimed |
-| Retrieval and citations | Real retrieval from a small curated ICAR/IRRI knowledge file | Replace with a licensed, versioned Odia corpus |
-| Response generation | Deterministic grounded adapter by default | Local Llama 3.2 1B through Ollama is implemented and verified |
-| Safety | Real confidence threshold, citation validation, chemical-prescription guard and KVK escalation | Extend with agronomist-reviewed policies and monitoring |
+| Audio and image transport | Real local browser-to-server transport for the included fixtures | Interpretation of arbitrary farmer media |
+| Odia speech recognition | Deterministic SHA-matched fixture adapter | Real speech recognition |
+| Rice image triage | Deterministic SHA-matched fixture adapter | Real image classification |
+| Retrieval and citations | Retrieval from a small curated ICAR/IRRI knowledge file | A licensed, versioned Odia corpus |
+| Response generation | Deterministic adapter by default; local Llama 3.2 1B is implemented and verified | Model-generated Odia guidance |
+| Safety | Confidence gate, citation validation, chemical-prescription guard and KVK escalation | Agronomic evaluation, field review and monitoring |
 
-The included SVGs are labelled synthetic illustrations, not AIKosh images. The WAVs are deterministic audio transport fixtures, not recordings or synthetic speech. This keeps the repository reproducible without misrepresenting unavailable datasets or model access.
+The included SVGs are labelled synthetic illustrations. The WAVs are deterministic audio transport fixtures, not recordings or synthetic speech. Unknown uploads fail closed and are not interpreted.
 
 ## Use local Llama 3
 
@@ -71,6 +71,10 @@ tests/                Input, grounding, citation, safety and API checks
 docs/                 Architecture, limitations and walkthrough
 ```
 
+## Contact
+
+Questions about this prototype can go to [unleashllm@mail.tin.computer](mailto:unleashllm@mail.tin.computer).
+
 ## License
 
-Code is licensed under the [MIT License](LICENSE). Bundled Noto Oriya fonts use the [SIL Open Font License](app/fonts/OFL.txt). The repository does not redistribute AIKosh, AI4Bharat, ICAR, or IRRI datasets. Linked third-party source material remains under its publisher's terms.
+Code is licensed under the [MIT License](LICENSE). Bundled Noto Oriya fonts use the [SIL Open Font License](app/fonts/OFL.txt). The repository does not redistribute third-party datasets or model files. Linked third-party source material remains under its publisher's terms.

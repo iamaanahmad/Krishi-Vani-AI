@@ -38,11 +38,11 @@ See [`OLLAMA_PROOF.md`](OLLAMA_PROOF.md) for the exact verified model, command, 
 
 ## Production adapter seams
 
-The next implementation step is to add actual adapters behind the same return types:
+The next implementation step is to add verified adapters behind the same return types:
 
-- Odia ASR from a verified AI4Bharat/Bhashini-compatible model or API;
-- an image classifier trained and evaluated on a licensed AIKosh rice dataset;
+- Odia ASR from an evaluated model or API;
+- an image classifier trained and evaluated on licensed rice imagery;
 - a versioned Odia corpus with per-chunk licences and agronomist review;
 - local or hosted open-weight Llama inference with latency and failure telemetry.
 
-No live access to those systems is claimed by this repository.
+No real ASR, real vision, external dataset service, or field deployment is included in this repository.

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-labelledby="title desc">
   <title id="title">Synthetic rice leaf with brown spot cues</title>
-  <desc id="desc">A labelled demonstration fixture, not an AIKosh or field photograph.</desc>
+  <desc id="desc">A labelled demonstration fixture, not a field photograph.</desc>
   <rect width="900" height="600" fill="#dbe7d5"/>
   <path d="M90 510 C260 430 520 240 820 72 C630 330 420 500 90 510Z" fill="#3f7f4d"/>
   <path d="M120 490 C340 400 560 250 790 105" fill="none" stroke="#b7d29b" stroke-width="12"/>
