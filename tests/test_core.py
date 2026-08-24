@@ -15,6 +15,7 @@ from krishi_vani.core import (
     TriagePipeline,
     UploadedFile,
     decode_upload,
+    normalise_event_name,
 )
 from krishi_vani.core import DeterministicGroundedGenerator
 
@@ -28,6 +29,9 @@ def upload(name: str, mime_type: str) -> UploadedFile:
 
 
 class InputTests(unittest.TestCase):
+    def test_standard_pageview_event_is_allowed(self) -> None:
+        self.assertEqual(normalise_event_name("$pageview"), "$pageview")
+
     def test_missing_audio_is_rejected(self) -> None:
         with self.assertRaisesRegex(InputError, "audio is required"):
             decode_upload({}, "audio", SUPPORTED_AUDIO_TYPES)
