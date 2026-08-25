@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Explore an AI in agriculture GitHub prototype for Odia rice triage, with inspectable fixtures, citations, safety gates, tests, and local setup.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="__CANONICAL_URL__">
+    <script type="application/ld+json">__STRUCTURED_DATA__</script>
+    <title>AI in Agriculture GitHub Prototype | Krishi-Vani AI</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="/fonts/noto-sans-oriya-400.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="/fonts/noto-sans-oriya-700.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="/fonts/noto-serif-oriya-600.ttf" as="font" type="font/ttf" crossorigin>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body class="proof-page">
+    <main>
+      <header class="site-header shell">
+        <a class="brand" href="/" aria-label="Krishi-Vani AI home">
+          <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span>Krishi-Vani <strong>AI</strong></span>
+        </a>
+        <div class="mode"><span></span> Open-source prototype</div>
+      </header>
+
+      <section class="proof-hero shell" aria-labelledby="proof-title">
+        <div class="proof-hero-copy">
+          <p class="eyebrow">Source code · safety gates · local run</p>
+          <h1 id="proof-title">AI in agriculture,<br><em>open on GitHub</em></h1>
+          <p class="proof-lede">Krishi-Vani AI is a narrow Odia rice-triage challenge prototype. Its source shows how two labelled audio-and-leaf fixtures move through retrieval, citation checks, and a confidence gate to produce one non-chemical next step or a clear expert escalation.</p>
+          <div class="proof-actions">
+            <a class="proof-primary" href="https://github.com/iamaanahmad/Krishi-Vani-AI">Inspect the source on GitHub <span aria-hidden="true">↗</span></a>
+            <a class="proof-secondary" href="/">Run the labelled demo</a>
+          </div>
+          <ul class="trust-list" aria-label="Repository facts">
+            <li><span aria-hidden="true">✓</span> MIT licensed</li>
+            <li><span aria-hidden="true">✓</span> Python 3.11+</li>
+            <li><span aria-hidden="true">✓</span> No cloud key required</li>
+          </ul>
+        </div>
+
+        <figure class="proof-visual">
+          <div class="proof-visual-image">
+            <img src="/fixtures/rice_brown_spot.svg" alt="Labelled synthetic rice-leaf illustration used by the supported demo fixture">
+            <span>Labelled synthetic fixture</span>
+          </div>
+          <figcaption>
+            <div><span>01</span><strong>Fixture match</strong><small>Known hashes only</small></div>
+            <div><span>02</span><strong>Grounding</strong><small>Curated ICAR/IRRI evidence</small></div>
+            <div><span>03</span><strong>Safety gate</strong><small>Answer or escalate</small></div>
+          </figcaption>
+        </figure>
+      </section>
+
+      <article class="proof-article shell">
+        <section class="proof-section" aria-labelledby="inspect-title">
+          <div class="section-intro">
+            <p class="step-label">What is inspectable</p>
+            <h2 id="inspect-title">A small system with visible seams</h2>
+            <p>This repository is designed for review, not for broad claims. The useful part is that each step can be traced from the bundled inputs to the final answer and its limits.</p>
+          </div>
+          <div class="proof-grid">
+            <a class="proof-card proof-card-wide" href="https://github.com/iamaanahmad/Krishi-Vani-AI/blob/main/docs/ARCHITECTURE.md">
+              <span class="proof-card-index">01</span>
+              <h3>Request path</h3>
+              <p>The architecture shows the browser transport, fixture adapters, evidence retrieval, response generation, validation, and confidence gate.</p>
+              <strong>Read the architecture ↗</strong>
+            </a>
+            <a class="proof-card" href="https://github.com/iamaanahmad/Krishi-Vani-AI/tree/main/tests">
+              <span class="proof-card-index">02</span>
+              <h3>Safety tests</h3>
+              <p>Tests cover unknown inputs, citation allowlists, unsafe chemical advice, API behavior, and the abstention path.</p>
+              <strong>Review the tests ↗</strong>
+            </a>
+            <a class="proof-card" href="https://github.com/iamaanahmad/Krishi-Vani-AI/blob/main/docs/OLLAMA_PROOF.md">
+              <span class="proof-card-index">03</span>
+              <h3>Local model proof</h3>
+              <p>The verified hybrid path records what local Llama generates and what reviewed application wording still controls.</p>
+              <strong>Check the Ollama proof ↗</strong>
+            </a>
+          </div>
+        </section>
+
+        <section class="proof-section flow-section" aria-labelledby="flow-title">
+          <div class="section-intro">
+            <p class="step-label">The complete path</p>
+            <h2 id="flow-title">From a labelled pair to one bounded result</h2>
+            <p>The browser sends one of two included audio-and-image pairs. The server accepts the files as real transport, but the current adapters interpret only exact fixture hashes.</p>
+          </div>
+          <ol class="flow-list">
+            <li><span>1</span><div><strong>Match the fixture</strong><p>The deterministic speech and vision adapters return fixed transcript and image cues only for the bundled files. Unknown media receives zero confidence.</p></div></li>
+            <li><span>2</span><div><strong>Retrieve approved evidence</strong><p>The pipeline searches a small local knowledge file built from cited ICAR and IRRI material. It does not query an open web index or AIKosh.</p></div></li>
+            <li><span>3</span><div><strong>Generate within the boundary</strong><p>The default path is deterministic. An optional local Llama path can synthesize the English summary and select approved citations, while reviewed application copy controls the Odia guidance and safe action.</p></div></li>
+            <li><span>4</span><div><strong>Validate or stop</strong><p>Unknown citations, pesticide or fungicide instructions, invalid output, or confidence below 0.72 trigger the safe fallback and a KVK or agricultural extension referral.</p></div></li>
+          </ol>
+        </section>
+
+        <section class="proof-section boundary-section" aria-labelledby="boundary-title">
+          <div class="boundary-copy">
+            <p class="step-label">Proof boundary</p>
+            <h2 id="boundary-title">What this agriculture AI project proves</h2>
+            <p>It proves an end-to-end, locally runnable pattern for grounded and uncertainty-aware agricultural triage. A reviewer can reproduce the supported and uncertain fixture paths, inspect the retrieved sources, and see where the system refuses to continue.</p>
+          </div>
+          <div class="boundary-stop">
+            <strong>It does not prove</strong>
+            <ul>
+              <li>interpretation of arbitrary farmer speech or photos</li>
+              <li>a confirmed crop-disease diagnosis</li>
+              <li>agronomic accuracy or field readiness</li>
+              <li>AIKosh, Bhashini, messaging, mandi, or subsidy integrations</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="proof-section run-section" aria-labelledby="run-title">
+          <div class="section-intro">
+            <p class="step-label">Reproduce it</p>
+            <h2 id="run-title">Run the repository in one command</h2>
+            <p>Clone the project on a machine with Python 3.11 or newer. No paid API or cloud credential is needed for the deterministic demo.</p>
+          </div>
+          <pre aria-label="Commands to run Krishi-Vani AI"><code>git clone https://github.com/iamaanahmad/Krishi-Vani-AI.git
+cd Krishi-Vani-AI
+./demo.sh</code></pre>
+          <div class="run-notes">
+            <p><strong>Then open</strong><br>http://127.0.0.1:8787</p>
+            <p><strong>Supported</strong><br>Returns one cited, non-chemical step.</p>
+            <p><strong>Uncertain</strong><br>Stops and requests expert review.</p>
+          </div>
+        </section>
+
+        <section class="proof-close" aria-labelledby="close-title">
+          <p class="step-label">The design choice</p>
+          <h2 id="close-title">The limits are part of the result</h2>
+          <p>Many AI-in-agriculture projects lead with the range of tasks they hope to cover. Krishi-Vani starts with a smaller question: can one local-language crop-triage path show its evidence, refuse unsafe output, and remain easy to inspect? Today, the repository answers that question for two labelled fixtures. The next credible step is held-out media evaluation, not a wider claim.</p>
+          <a href="https://github.com/iamaanahmad/Krishi-Vani-AI">Inspect the implementation on GitHub ↗</a>
+        </section>
+      </article>
+
+      <footer class="shell">
+        <span>Krishi-Vani AI · Open-source challenge prototype</span>
+        <span class="footer-links">
+          <a href="/">Demo</a>
+          <a href="mailto:unleashllm@mail.tin.computer">Support</a>
+          <a class="tin-credit" href="https://tin.computer"><svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" fill="#66DC9D"/></svg>Growth by Tin</a>
+        </span>
+      </footer>
+    </main>
+  </body>
+</html>
