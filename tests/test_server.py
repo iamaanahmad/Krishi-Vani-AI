@@ -216,6 +216,29 @@ class ServerTests(unittest.TestCase):
         self.assertIn("capture_dead_clicks: true", script)
         self.assertNotIn(".identify(", script)
 
+    def test_client_analytics_classifies_ai_referrers_without_raw_attribution(self) -> None:
+        status, _, data = self.request("GET", "/app.js")
+        script = data.decode()
+        self.assertEqual(status, 200)
+        for host in (
+            "chatgpt.com",
+            "chat.openai.com",
+            "openai.com",
+            "claude.ai",
+            "perplexity.ai",
+            "gemini.google.com",
+            "copilot.microsoft.com",
+        ):
+            self.assertIn(f'"{host}"', script)
+        self.assertIn('return "ai_assistant"', script)
+        self.assertIn('"$pageview": ["referrer_channel"]', script)
+        self.assertIn('demo_loaded: ["referrer_channel"]', script)
+        self.assertIn('value_reached: ["outcome", "referrer_channel"]', script)
+        self.assertIn("localStorage.getItem(FIRST_REFERRER_CHANNEL_KEY)", script)
+        self.assertIn("localStorage.setItem(FIRST_REFERRER_CHANNEL_KEY", script)
+        self.assertNotIn("ai_prompt_text", script)
+        self.assertNotIn("signup_source", script)
+
     def test_feedback_behavior_caps_comment_and_submits_once(self) -> None:
         status, _, data = self.request("GET", "/app.js")
         script = data.decode()
@@ -329,6 +352,71 @@ class ServerTests(unittest.TestCase):
             properties = EVENTS[-1]["properties"]
         self.assertEqual(set(properties), {"route", "rating", "feedback"})
         self.assertEqual(len(properties["feedback"]), 280)
+
+    def test_referrer_channel_is_coarse_and_limited_to_load_and_value_events(self) -> None:
+        with EVENTS_LOCK:
+            EVENTS.clear()
+        for event, extra in (
+            ("$pageview", {}),
+            ("demo_loaded", {}),
+            ("value_reached", {"outcome": "supported"}),
+        ):
+            status, _, _ = self.request(
+                "POST",
+                "/api/events",
+                {
+                    "event": event,
+                    "properties": {
+                        "route": "/",
+                        "referrer_channel": "ai_assistant",
+                        "referrer": "https://chatgpt.com/private/path?prompt=private",
+                        "utm_source": "chatgpt.com",
+                        **extra,
+                    },
+                },
+            )
+            self.assertEqual(status, 202)
+
+        status, _, _ = self.request(
+            "POST",
+            "/api/events",
+            {
+                "event": "triage_completed",
+                "properties": {
+                    "route": "/",
+                    "outcome": "supported",
+                    "referrer_channel": "ai_assistant",
+                },
+            },
+        )
+        self.assertEqual(status, 202)
+
+        with EVENTS_LOCK:
+            events = list(EVENTS)
+        for event in events[:3]:
+            self.assertEqual(event["properties"]["referrer_channel"], "ai_assistant")
+            self.assertNotIn("referrer", event["properties"])
+            self.assertNotIn("utm_source", event["properties"])
+        self.assertNotIn("referrer_channel", events[3]["properties"])
+
+    def test_referrer_channel_rejects_raw_or_unknown_values(self) -> None:
+        with EVENTS_LOCK:
+            EVENTS.clear()
+        status, _, _ = self.request(
+            "POST",
+            "/api/events",
+            {
+                "event": "demo_loaded",
+                "properties": {
+                    "route": "/",
+                    "referrer_channel": "https://chatgpt.com/?prompt=private",
+                },
+            },
+        )
+        self.assertEqual(status, 202)
+        with EVENTS_LOCK:
+            properties = EVENTS[-1]["properties"]
+        self.assertEqual(properties, {"route": "/"})
 
     def test_unapproved_event_is_rejected(self) -> None:
         status, _, data = self.request(

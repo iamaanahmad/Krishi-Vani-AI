@@ -8,18 +8,45 @@ const POSTHOG_CONFIG = Object.freeze({
   host: "https://us.i.posthog.com",
 });
 const ANALYTICS_SCHEMA = Object.freeze({
-  "$pageview": [],
-  demo_loaded: [],
+  "$pageview": ["referrer_channel"],
+  demo_loaded: ["referrer_channel"],
   triage_submitted: ["scenario"],
   triage_completed: ["outcome"],
   triage_failed: ["stage"],
-  value_reached: ["outcome"],
+  value_reached: ["outcome", "referrer_channel"],
   error_shown: ["stage"],
   empty_state_shown: ["surface"],
   feedback_submitted: ["rating", "feedback"],
 });
 const POSTHOG_DISTINCT_ID_KEY = "krishi_vani_posthog_distinct_id";
+const FIRST_REFERRER_CHANNEL_KEY = "krishi_vani_first_referrer_channel";
+const REFERRER_CHANNELS = new Set(["ai_assistant", "campaign", "referral", "direct"]);
+const AI_REFERRER_HOSTS = Object.freeze([
+  "chatgpt.com",
+  "chat.openai.com",
+  "openai.com",
+  "claude.ai",
+  "perplexity.ai",
+  "gemini.google.com",
+  "copilot.microsoft.com",
+]);
+const AI_UTM_SOURCES = new Set([
+  "chatgpt",
+  "chatgpt.com",
+  "chat.openai.com",
+  "openai",
+  "openai.com",
+  "claude",
+  "claude.ai",
+  "perplexity",
+  "perplexity.ai",
+  "gemini",
+  "gemini.google.com",
+  "copilot",
+  "copilot.microsoft.com",
+]);
 let sessionDistinctId = "";
+let sessionReferrerChannel = "";
 let selectedFeedbackRating = "";
 
 const fixturePaths = {
@@ -69,6 +96,61 @@ function posthogDistinctId() {
   return sessionDistinctId;
 }
 
+function isAiReferrerHost(hostname) {
+  const host = hostname.toLowerCase().replace(/^www\./, "");
+  return AI_REFERRER_HOSTS.some((candidate) => (
+    host === candidate || host.endsWith(`.${candidate}`)
+  ));
+}
+
+function deriveReferrerChannel() {
+  let utmSource = "";
+  try {
+    utmSource = new URLSearchParams(location.search)
+      .get("utm_source")
+      ?.trim()
+      .toLowerCase()
+      .replace(/^www\./, "") || "";
+  } catch (_) {
+    // A malformed URL must not interfere with the product journey.
+  }
+
+  if (AI_UTM_SOURCES.has(utmSource)) return "ai_assistant";
+
+  if (document.referrer) {
+    try {
+      const referrer = new URL(document.referrer);
+      if (isAiReferrerHost(referrer.hostname)) return "ai_assistant";
+      if (referrer.origin !== location.origin) return utmSource ? "campaign" : "referral";
+    } catch (_) {
+      // Never retain or send malformed referrer content.
+    }
+  }
+
+  return utmSource ? "campaign" : "direct";
+}
+
+function firstReferrerChannel() {
+  if (sessionReferrerChannel) return sessionReferrerChannel;
+  try {
+    const stored = localStorage.getItem(FIRST_REFERRER_CHANNEL_KEY) || "";
+    if (REFERRER_CHANNELS.has(stored)) {
+      sessionReferrerChannel = stored;
+      return sessionReferrerChannel;
+    }
+  } catch (_) {
+    // Fall back to memory when local storage is unavailable.
+  }
+
+  sessionReferrerChannel = deriveReferrerChannel();
+  try {
+    localStorage.setItem(FIRST_REFERRER_CHANNEL_KEY, sessionReferrerChannel);
+  } catch (_) {
+    // The coarse channel remains available for this page load.
+  }
+  return sessionReferrerChannel;
+}
+
 function approvedProperties(event, properties = {}) {
   const approved = ANALYTICS_SCHEMA[event];
   if (!approved) return null;
@@ -79,6 +161,9 @@ function approvedProperties(event, properties = {}) {
     const value = properties[key].trim().slice(0, limit);
     if (value) clean[key] = value;
   });
+  if (approved.includes("referrer_channel")) {
+    clean.referrer_channel = firstReferrerChannel();
+  }
   if (event === "feedback_submitted" && !["thumbs_up", "thumbs_down"].includes(clean.rating)) {
     delete clean.rating;
   }

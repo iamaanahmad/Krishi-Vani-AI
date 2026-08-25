@@ -36,16 +36,17 @@ PROJECT_LEGAL_STATUS = (
 EVENTS: list[dict[str, object]] = []
 EVENTS_LOCK = threading.Lock()
 EVENT_PROPERTY_ALLOWLIST = {
-    "$pageview": set(),
-    "demo_loaded": set(),
+    "$pageview": {"referrer_channel"},
+    "demo_loaded": {"referrer_channel"},
     "triage_submitted": {"scenario"},
     "triage_completed": {"outcome"},
     "triage_failed": {"stage"},
-    "value_reached": {"outcome"},
+    "value_reached": {"outcome", "referrer_channel"},
     "error_shown": {"stage"},
     "empty_state_shown": {"surface"},
     "feedback_submitted": {"rating", "feedback"},
 }
+REFERRER_CHANNELS = {"ai_assistant", "campaign", "referral", "direct"}
 
 
 def sanitise_event_properties(name: str, value: object) -> dict[str, str]:
@@ -63,6 +64,8 @@ def sanitise_event_properties(name: str, value: object) -> dict[str, str]:
             properties[key] = clean
     if name == "feedback_submitted" and properties.get("rating") not in {"thumbs_up", "thumbs_down"}:
         properties.pop("rating", None)
+    if properties.get("referrer_channel") not in REFERRER_CHANNELS:
+        properties.pop("referrer_channel", None)
     if "route" in properties and not properties["route"].startswith("/"):
         properties.pop("route", None)
     return properties
