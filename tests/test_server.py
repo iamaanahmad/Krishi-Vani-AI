@@ -12,6 +12,15 @@ from krishi_vani.server import EVENTS, EVENTS_LOCK, make_server
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PROJECT_TITLE = "Krishi-Vani AI: Open-source rice-triage prototype for Odia farmers"
+PROJECT_DESCRIPTION = (
+    "Krishi-Vani AI is an open-source rice-triage challenge prototype for Odia-speaking "
+    "farmers that uses two labelled audio-and-leaf fixture pairs to demonstrate one cited "
+    "non-chemical next step or a KVK/extension escalation."
+)
+PROJECT_LEGAL_STATUS = (
+    "Krishi-Vani AI is an open-source project; no separate incorporated legal entity is published."
+)
 
 
 class ServerTests(unittest.TestCase):
@@ -73,6 +82,8 @@ class ServerTests(unittest.TestCase):
         self.assertIn("Farmer media is not interpreted yet", page)
         self.assertNotIn('type="file"', page)
         self.assertIn('<meta name="robots" content="index, follow">', page)
+        self.assertIn(f"<title>{PROJECT_TITLE}</title>", page)
+        self.assertIn(f'<meta name="description" content="{PROJECT_DESCRIPTION}">', page)
         self.assertIn('<link rel="canonical" href="https://krishi-vani.example/">', page)
         self.assertNotIn("__CANONICAL_URL__", page)
         self.assertNotIn("__STRUCTURED_DATA__", page)
@@ -106,12 +117,21 @@ class ServerTests(unittest.TestCase):
         entities = {entity["@type"]: entity for entity in structured_data["@graph"]}
         self.assertEqual(
             set(entities),
-            {"Organization", "SoftwareApplication", "FAQPage"},
+            {"SoftwareApplication", "SoftwareSourceCode", "FAQPage"},
         )
-        self.assertEqual(entities["Organization"]["url"], "https://krishi-vani.example/")
+        self.assertEqual(entities["SoftwareApplication"]["description"], PROJECT_DESCRIPTION)
+        self.assertEqual(entities["SoftwareApplication"]["dateCreated"], "2026-08-24")
+        self.assertEqual(
+            entities["SoftwareApplication"]["disambiguatingDescription"],
+            PROJECT_LEGAL_STATUS,
+        )
         self.assertEqual(
             entities["SoftwareApplication"]["sameAs"],
             ["https://github.com/iamaanahmad/Krishi-Vani-AI"],
+        )
+        self.assertEqual(
+            entities["SoftwareSourceCode"]["codeRepository"],
+            "https://github.com/iamaanahmad/Krishi-Vani-AI",
         )
         self.assertNotIn("offers", entities["SoftwareApplication"])
         self.assertNotIn("aggregateRating", entities["SoftwareApplication"])
@@ -128,13 +148,16 @@ class ServerTests(unittest.TestCase):
         page = data.decode()
         self.assertEqual(status, 200)
         self.assertIn("text/html", content_type)
-        self.assertIn("AI in Agriculture GitHub Prototype", page)
+        self.assertIn(f"<title>{PROJECT_TITLE}</title>", page)
+        self.assertIn(f'<meta name="description" content="{PROJECT_DESCRIPTION}">', page)
         self.assertIn(
             '<link rel="canonical" href="https://krishi-vani.example/open-source-agriculture-ai/">',
             page,
         )
         self.assertIn("interpretation of arbitrary farmer speech or photos", page)
         self.assertIn("does not prove", page)
+        self.assertIn("24 August 2026, based on the first repository commit.", page)
+        self.assertIn(PROJECT_LEGAL_STATUS, page)
         self.assertIn('href="/">Run the labelled demo</a>', page)
         self.assertNotIn("__CANONICAL_URL__", page)
         self.assertNotIn("__STRUCTURED_DATA__", page)
@@ -151,6 +174,10 @@ class ServerTests(unittest.TestCase):
             structured_data["url"],
             "https://krishi-vani.example/open-source-agriculture-ai/",
         )
+        self.assertEqual(structured_data["headline"], PROJECT_TITLE)
+        self.assertEqual(structured_data["description"], PROJECT_DESCRIPTION)
+        self.assertEqual(structured_data["dateCreated"], "2026-08-24")
+        self.assertEqual(structured_data["disambiguatingDescription"], PROJECT_LEGAL_STATUS)
 
     def test_result_ui_does_not_present_fixture_score_as_accuracy(self) -> None:
         status, _, data = self.request("GET", "/app.js")
@@ -223,6 +250,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("text/plain", content_type)
         llms_text = data.decode()
+        self.assertIn(PROJECT_DESCRIPTION, llms_text)
+        self.assertIn("Founded: 24 August 2026", llms_text)
+        self.assertIn(PROJECT_LEGAL_STATUS, llms_text)
         self.assertIn("Canonical demo: https://krishi-vani.example/", llms_text)
         self.assertIn("https://github.com/iamaanahmad/Krishi-Vani-AI", llms_text)
         self.assertIn("Does not interpret arbitrary farmer recordings or photographs", llms_text)

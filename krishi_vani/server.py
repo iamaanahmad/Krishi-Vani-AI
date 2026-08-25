@@ -24,6 +24,15 @@ from .core import (
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / "app"
+PROJECT_DESCRIPTION = (
+    "Krishi-Vani AI is an open-source rice-triage challenge prototype for Odia-speaking "
+    "farmers that uses two labelled audio-and-leaf fixture pairs to demonstrate one cited "
+    "non-chemical next step or a KVK/extension escalation."
+)
+PROJECT_DATE_FOUNDED = "2026-08-24"
+PROJECT_LEGAL_STATUS = (
+    "Krishi-Vani AI is an open-source project; no separate incorporated legal entity is published."
+)
 EVENTS: list[dict[str, object]] = []
 EVENTS_LOCK = threading.Lock()
 EVENT_PROPERTY_ALLOWLIST = {
@@ -246,8 +255,9 @@ class AppHandler(BaseHTTPRequestHandler):
     def _llms(self) -> None:
         content = (
             "# Krishi-Vani AI\n\n"
-            "> Open-source, offline-capable challenge prototype for Odia rice triage "
-            "using two labelled demo fixture pairs.\n\n"
+            f"> {PROJECT_DESCRIPTION}\n\n"
+            "- Founded: 24 August 2026, based on the first repository commit.\n"
+            f"- Legal entity: {PROJECT_LEGAL_STATUS}\n"
             f"- Canonical demo: {self._public_origin()}/\n"
             f"- Open-source proof: {self._public_origin()}/open-source-agriculture-ai/\n"
             "- Source code: https://github.com/iamaanahmad/Krishi-Vani-AI\n\n"
@@ -270,35 +280,36 @@ class AppHandler(BaseHTTPRequestHandler):
             "@context": "https://schema.org",
             "@graph": [
                 {
-                    "@type": "Organization",
-                    "@id": f"{canonical_url}#organization",
-                    "name": "Krishi-Vani AI project",
-                    "alternateName": "Krishi-Vani AI",
-                    "url": canonical_url,
-                    "sameAs": [repository_url],
-                    "description": "Open-source challenge prototype project for transparent Odia rice triage.",
-                },
-                {
                     "@type": "SoftwareApplication",
                     "@id": f"{canonical_url}#software",
                     "name": "Krishi-Vani AI",
                     "url": canonical_url,
-                    "applicationCategory": "EducationalApplication",
+                    "applicationCategory": "Open-source rice-triage prototype",
                     "operatingSystem": "Python 3.11+ and a modern browser",
                     "inLanguage": ["or", "en"],
-                    "description": (
-                        "Open-source labelled-fixture demonstration of Odia rice triage "
-                        "with cited guidance and safe escalation."
-                    ),
+                    "description": PROJECT_DESCRIPTION,
+                    "dateCreated": PROJECT_DATE_FOUNDED,
+                    "disambiguatingDescription": PROJECT_LEGAL_STATUS,
+                    "audience": {"@type": "Audience", "audienceType": "Odia-speaking farmers"},
                     "sameAs": [repository_url],
                     "license": "https://opensource.org/license/mit",
                     "isAccessibleForFree": True,
-                    "author": {"@id": f"{canonical_url}#organization"},
                     "featureList": [
                         "Two bundled labelled audio-and-leaf fixture scenarios",
                         "Cited non-chemical next step when curated evidence matches",
                         "Confidence-aware KVK or agricultural extension escalation",
                     ],
+                },
+                {
+                    "@type": "SoftwareSourceCode",
+                    "@id": f"{canonical_url}#source",
+                    "name": "Krishi-Vani AI source code",
+                    "codeRepository": repository_url,
+                    "dateCreated": PROJECT_DATE_FOUNDED,
+                    "description": PROJECT_DESCRIPTION,
+                    "license": "https://opensource.org/license/mit",
+                    "runtimePlatform": "Python 3.11+ and a modern browser",
+                    "isPartOf": {"@id": f"{canonical_url}#software"},
                 },
                 {
                     "@type": "FAQPage",
@@ -338,20 +349,14 @@ class AppHandler(BaseHTTPRequestHandler):
         data = {
             "@context": "https://schema.org",
             "@type": "TechArticle",
-            "headline": "AI in Agriculture GitHub Prototype",
-            "description": (
-                "An inspectable open-source Odia rice-triage prototype with labelled fixtures, "
-                "citations, safety gates, tests, and local setup."
-            ),
+            "headline": "Krishi-Vani AI: Open-source rice-triage prototype for Odia farmers",
+            "description": PROJECT_DESCRIPTION,
+            "dateCreated": PROJECT_DATE_FOUNDED,
+            "disambiguatingDescription": PROJECT_LEGAL_STATUS,
             "url": canonical_url,
             "mainEntityOfPage": canonical_url,
             "inLanguage": "en",
-            "about": "Open-source artificial intelligence in agriculture",
-            "author": {
-                "@type": "Organization",
-                "name": "Krishi-Vani AI project",
-                "url": f"{public_origin}/",
-            },
+            "about": "Open-source rice triage for Odia-speaking farmers",
             "isPartOf": {"@type": "WebSite", "name": "Krishi-Vani AI", "url": f"{public_origin}/"},
         }
         return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")

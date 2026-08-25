@@ -406,6 +406,10 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
 
 .proof-close { max-width: 830px; padding: 76px 0 0; }
 .proof-close > p:not(.step-label) { max-width: 68ch; margin: 24px 0 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
+.project-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 28px 0 0; }
+.project-facts div { padding: 18px 20px; background: rgb(255 255 255 / 70%); border: 1px solid var(--line); border-radius: 12px; }
+.project-facts dt { color: var(--action); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.project-facts dd { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .proof-close > a { display: inline-block; margin-top: 28px; color: var(--action); font-weight: 800; text-underline-offset: 4px; }
 
 @media (max-width: 960px) {
@@ -473,6 +477,7 @@ footer { display: flex; align-items: center; justify-content: space-between; gap
   .run-section code { white-space: pre-wrap; overflow-wrap: anywhere; }
   .run-notes { grid-template-columns: 1fr; margin-top: -10px; }
   .proof-close { padding-top: 56px; }
+  .project-facts { grid-template-columns: 1fr; }
   .footer-links { flex-wrap: wrap; }
 }
 

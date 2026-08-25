@@ -1,6 +1,11 @@
 # Krishi-Vani AI
 
-Krishi-Vani AI is a narrow, offline-capable challenge prototype for Odia rice triage. Two labelled audio-and-image fixture pairs demonstrate either one cited, non-chemical next step or a clear KVK/extension escalation.
+Krishi-Vani AI is an open-source rice-triage challenge prototype for Odia-speaking farmers that uses two labelled audio-and-leaf fixture pairs to demonstrate one cited non-chemical next step or a KVK/extension escalation.
+
+## Project facts
+
+- **Founded:** 24 August 2026, based on the first repository commit.
+- **Legal entity:** Krishi-Vani AI is an open-source project; no separate incorporated legal entity is published.
 
 ## Run in one command
 
