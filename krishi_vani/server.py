@@ -160,18 +160,27 @@ class AppHandler(BaseHTTPRequestHandler):
         else:
             base = PUBLIC
             relative = "index.html" if path in {"", "/"} else path.lstrip("/")
+            if relative.endswith("/"):
+                relative += "index.html"
         target = (base / relative).resolve()
         if base.resolve() not in target.parents or not target.is_file():
             self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
             return
         content = target.read_bytes()
-        if target == PUBLIC / "index.html":
+        if target.suffix == ".html":
             public_origin = self._public_origin()
-            canonical_url = html.escape(f"{public_origin}/", quote=True)
+            public_path = "/" if target == PUBLIC / "index.html" else f"/{target.parent.relative_to(PUBLIC)}/"
+            canonical_url = html.escape(f"{public_origin}{public_path}", quote=True)
             content = content.replace(b"__CANONICAL_URL__", canonical_url.encode("utf-8"))
+        if target == PUBLIC / "index.html":
             content = content.replace(
                 b"__STRUCTURED_DATA__",
                 self._structured_data(public_origin).encode("utf-8"),
+            )
+        elif target == PUBLIC / "open-source-agriculture-ai" / "index.html":
+            content = content.replace(
+                b"__STRUCTURED_DATA__",
+                self._article_structured_data(public_origin).encode("utf-8"),
             )
         mime_type, _ = mimetypes.guess_type(target.name)
         self.send_response(HTTPStatus.OK)
@@ -224,10 +233,12 @@ class AppHandler(BaseHTTPRequestHandler):
 
     def _sitemap(self) -> None:
         canonical_url = html.escape(f"{self._public_origin()}/")
+        proof_url = html.escape(f"{self._public_origin()}/open-source-agriculture-ai/")
         content = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
             f"  <url><loc>{canonical_url}</loc></url>\n"
+            f"  <url><loc>{proof_url}</loc></url>\n"
             "</urlset>\n"
         ).encode("utf-8")
         self._text(HTTPStatus.OK, "application/xml; charset=utf-8", content)
@@ -238,6 +249,7 @@ class AppHandler(BaseHTTPRequestHandler):
             "> Open-source, offline-capable challenge prototype for Odia rice triage "
             "using two labelled demo fixture pairs.\n\n"
             f"- Canonical demo: {self._public_origin()}/\n"
+            f"- Open-source proof: {self._public_origin()}/open-source-agriculture-ai/\n"
             "- Source code: https://github.com/iamaanahmad/Krishi-Vani-AI\n\n"
             "## Verified demo behavior\n\n"
             "- Recognizes only the two bundled labelled audio-and-leaf fixture pairs.\n"
@@ -317,6 +329,30 @@ class AppHandler(BaseHTTPRequestHandler):
                     ],
                 },
             ],
+        }
+        return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+
+    @staticmethod
+    def _article_structured_data(public_origin: str) -> str:
+        canonical_url = f"{public_origin}/open-source-agriculture-ai/"
+        data = {
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            "headline": "AI in Agriculture GitHub Prototype",
+            "description": (
+                "An inspectable open-source Odia rice-triage prototype with labelled fixtures, "
+                "citations, safety gates, tests, and local setup."
+            ),
+            "url": canonical_url,
+            "mainEntityOfPage": canonical_url,
+            "inLanguage": "en",
+            "about": "Open-source artificial intelligence in agriculture",
+            "author": {
+                "@type": "Organization",
+                "name": "Krishi-Vani AI project",
+                "url": f"{public_origin}/",
+            },
+            "isPartOf": {"@type": "WebSite", "name": "Krishi-Vani AI", "url": f"{public_origin}/"},
         }
         return json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
 

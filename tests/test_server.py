@@ -119,6 +119,39 @@ class ServerTests(unittest.TestCase):
             self.assertIn(question["name"], page)
             self.assertIn(question["acceptedAnswer"]["text"], page)
 
+    def test_open_source_proof_page_is_indexable_and_honest(self) -> None:
+        status, content_type, data = self.request(
+            "GET",
+            "/open-source-agriculture-ai/",
+            headers={"Host": "krishi-vani.example", "X-Forwarded-Proto": "https"},
+        )
+        page = data.decode()
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", content_type)
+        self.assertIn("AI in Agriculture GitHub Prototype", page)
+        self.assertIn(
+            '<link rel="canonical" href="https://krishi-vani.example/open-source-agriculture-ai/">',
+            page,
+        )
+        self.assertIn("interpretation of arbitrary farmer speech or photos", page)
+        self.assertIn("does not prove", page)
+        self.assertIn('href="/">Run the labelled demo</a>', page)
+        self.assertNotIn("__CANONICAL_URL__", page)
+        self.assertNotIn("__STRUCTURED_DATA__", page)
+
+        match = re.search(
+            r'<script type="application/ld\+json">(.*?)</script>',
+            page,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        structured_data = json.loads(match.group(1))
+        self.assertEqual(structured_data["@type"], "TechArticle")
+        self.assertEqual(
+            structured_data["url"],
+            "https://krishi-vani.example/open-source-agriculture-ai/",
+        )
+
     def test_result_ui_does_not_present_fixture_score_as_accuracy(self) -> None:
         status, _, data = self.request("GET", "/app.js")
         script = data.decode()
@@ -181,6 +214,10 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("application/xml", content_type)
         self.assertIn("<loc>https://krishi-vani.example/</loc>", data.decode())
+        self.assertIn(
+            "<loc>https://krishi-vani.example/open-source-agriculture-ai/</loc>",
+            data.decode(),
+        )
 
         status, content_type, data = self.request("GET", "/llms.txt", headers=headers)
         self.assertEqual(status, 200)
