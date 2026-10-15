@@ -78,7 +78,7 @@ class ServerTests(unittest.TestCase):
         self.assertIn("text/html", content_type)
         self.assertIn('lang="or"', page)
         self.assertEqual(page.count('class="primary-action"'), 1)
-        self.assertIn('href="mailto:unleashllm@mail.tin.computer"', page)
+        self.assertNotIn('href="mailto:', page)
         self.assertIn("Farmer media is not interpreted yet", page)
         self.assertNotIn('type="file"', page)
         self.assertIn('<meta name="robots" content="index, follow">', page)
