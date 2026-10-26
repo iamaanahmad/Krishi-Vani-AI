@@ -211,3 +211,37 @@ class LlamaSafetyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ExpandedEvidenceTests(unittest.TestCase):
+    def test_supported_case_returns_five_cited_records(self) -> None:
+        pipeline = TriagePipeline(DeterministicGroundedGenerator())
+        result = pipeline.triage(
+            upload("odia_brown_spot_question.wav", "audio/wav"),
+            upload("rice_brown_spot.svg", "image/svg+xml"),
+        )
+        self.assertEqual(result["status"], "supported")
+        self.assertEqual(len(result["evidence"]), 5)
+        self.assertEqual(set(result["citations"]), {item["citation_id"] for item in result["evidence"]})
+        self.assertEqual(result["speech_confidence"], 0.96)
+        self.assertEqual(result["vision_confidence"], 0.88)
+        self.assertEqual(result["confidence"], 0.88)
+
+    def test_unknown_upload_fails_closed_with_zero_confidence(self) -> None:
+        pipeline = TriagePipeline(DeterministicGroundedGenerator())
+        result = pipeline.triage(
+            UploadedFile("farmer.wav", "audio/wav", b"unknown-audio"),
+            UploadedFile("leaf.png", "image/png", b"unknown-image"),
+        )
+        self.assertEqual(result["status"], "escalate")
+        self.assertEqual(result["confidence"], 0.0)
+        self.assertEqual(result["citations"], [])
+
+    def test_no_new_evidence_contains_banned_prescription_term(self) -> None:
+        pipeline = TriagePipeline(DeterministicGroundedGenerator())
+        result = pipeline.triage(
+            upload("odia_brown_spot_question.wav", "audio/wav"),
+            upload("rice_brown_spot.svg", "image/svg+xml"),
+        )
+        joined = " ".join(item["excerpt_en"].lower() for item in result["evidence"])
+        for term in BANNED_PRESCRIPTION_TERMS:
+            self.assertNotIn(term, joined)

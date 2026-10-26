@@ -58,12 +58,12 @@ The minimum combined confidence threshold is **0.72**. If either the speech adap
 
 ### 📚 Evidence-grounded responses
 
-Every supported answer is backed by retrieved excerpts from `data/knowledge.json`, a manually curated file sourced from:
+Every supported answer is backed by retrieved excerpts from `data/knowledge.json`, a manually curated file (5 records) sourced from:
 
 - **ICAR** — *Kharif Agro-Advisories for Farmers 2025* (brown-spot appearance, non-chemical crop management)
 - **IRRI** — Rice Knowledge Bank leaf-blast page (distinguishing pointed blast lesions from round brown-spot cues)
 
-Citation IDs are validated against retrieved documents before any response is returned.
+Citation IDs are validated against retrieved documents before any response is returned. The supported case now returns all 5 brown-spot records: ICAR Kharif 2025, IRRI blast differentiation, IRRI brown-spot identification, IRRI soil-fertility/resistant-variety care, and IRRI narrow-brown-spot differentiation.
 
 ### 🚫 Chemical-prescription guard
 
@@ -112,7 +112,7 @@ If the primary generator fails validation for any reason, the pipeline immediate
 | Audio and image transport | Real local browser-to-server transport for the included fixtures | Interpretation of arbitrary farmer media |
 | Odia speech recognition | Deterministic SHA-256–matched fixture adapter | Real speech recognition |
 | Rice image triage | Deterministic SHA-256–matched fixture adapter | Real image classification |
-| Retrieval and citations | Retrieval from a small curated ICAR/IRRI knowledge file | A licensed, versioned Odia corpus |
+| Retrieval and citations | Retrieval from a curated ICAR/IRRI knowledge file (5 records) | A licensed, versioned Odia corpus |
 | Response generation | Deterministic adapter by default; local Llama 3.2 1B verified | Model-generated Odia guidance |
 | Safety | Confidence gate, citation validation, chemical-prescription guard, KVK escalation | Agronomic evaluation, field review, monitoring |
 
@@ -127,7 +127,7 @@ app/                  Odia-first accessible web workbench (HTML, CSS, JS)
 krishi_vani/          HTTP server, adapters, retrieval, grounding, and safety
   core.py             Pipeline, adapters, confidence gate, validation
   server.py           ThreadedHTTPServer, API endpoints, static serving
-data/knowledge.json   Curated cited ICAR/IRRI demonstration evidence
+data/knowledge.json   Curated cited ICAR/IRRI demonstration evidence (5 records)
 fixtures/             Labelled supported and uncertain audio + image fixtures
 scripts/              Reproducible fixture generation and Ollama verification
 tests/                Input, grounding, citation, safety, and API checks

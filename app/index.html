@@ -52,14 +52,16 @@
             <span class="rice-only">Rice only</span>
           </div>
 
+          <p id="static-mode-banner" hidden style="margin:0 0 12px;padding:10px;border:1px solid #d97706;border-radius:8px;background:#fffbeb;font-size:13px">Phone preview mode: this static preview shows the same three scenarios and safety rules. The full Python + Llama demo runs on localhost — see README and docs/LIVE_DEMO.md.</p>
           <div class="guided-demo" aria-label="Guided judge demo">
             <div>
               <strong>Guided fixture demo</strong>
-              <span>Only labelled fixture pairs are interpreted</span>
+              <span>Only labelled fixture pairs are interpreted; Unknown upload shows fail-closed behaviour</span>
             </div>
             <div class="scenario" role="group" aria-label="Choose demonstration scenario">
               <button type="button" class="scenario-button active" data-scenario="supported" aria-pressed="true">Supported</button>
               <button type="button" class="scenario-button" data-scenario="uncertain" aria-pressed="false">Uncertain</button>
+              <button type="button" class="scenario-button" data-scenario="unknown" aria-pressed="false">Unknown upload</button>
             </div>
           </div>
 
@@ -104,6 +106,8 @@
         <div class="result-topline">
           <div class="result-status" id="result-status"><span></span><strong></strong></div>
           <div class="evidence-gate"><span>Evidence gate</span><strong id="evidence-gate-value"></strong></div>
+          <p id="confidence-breakdown" style="margin:8px 0 0;font-size:13px;color:var(--muted)"></p>
+          <p id="llm-note" style="margin:4px 0 0;font-size:13px;color:var(--muted)"></p>
         </div>
         <div class="result-layout">
           <article class="answer-card">

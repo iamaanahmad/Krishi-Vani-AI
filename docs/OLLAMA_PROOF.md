@@ -75,3 +75,7 @@ The uncertain fixture remains below the `0.72` confidence threshold, returns no 
 ## Honest evidence boundary
 
 The real Llama model performs a narrow role: it receives the deterministic fixture transcript, deterministic vision cues, and two curated ICAR/IRRI excerpts, then generates the English summary and reason and selects citations under a JSON schema. Application policy supplies the reviewed Odia wording and the single safe observation step before final validation. This run does not prove Odia generation quality, real ASR, real vision, external dataset use, agronomic accuracy, field latency, or farmer readiness.
+
+## Note on the 5-record expansion
+
+The verified run above used the original 2-record knowledge file. The deterministic pipeline and its tests were re-run for the 5-record file (37 tests passing locally), but the live Ollama run must be re-verified with `python3 -m scripts.verify_ollama` before the finale, and this note must be updated with the new output. Do not claim the 2-record Ollama proof covers the 5-record version until that re-run passes.

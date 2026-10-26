@@ -24,6 +24,8 @@ Open **Demo adapters** to identify the deterministic ASR/vision adapter and grou
 
 ## 2:40–3:50 — uncertain case
 
+After the uncertain case, click **Unknown upload** if time allows: confidence 0.0, no advice, no citations. This is the fail-closed proof a mentor or jury member can test on a phone with any upload.
+
 Scroll back to the workbench, select **Uncertain**, and run the check again.
 
 Show that the evidence gate stops, no citation is fabricated, and the answer asks for a clearer close-up plus KVK/extension review. This is the responsible-AI moment: the system knows when not to answer.
@@ -45,5 +47,7 @@ Do not pull a model during the judged demo.
 Run `make check`. Call out the automated coverage for input validation, evidence grounding, citation integrity, abstention, invalid JSON, wrong-language output, unsafe chemical advice, model failure, the API, and E2E event read-back. The real-model evidence is reproducible with `python3 -m scripts.verify_ollama` and recorded in `docs/OLLAMA_PROOF.md`.
 
 ## 6:10–6:40 — production path
+
+For a phone test without a server, use the labelled static preview (see docs/LIVE_DEMO.md); for the judged demo, use localhost with Ollama preloaded, not a live pull.
 
 Close with the narrow plan: replace the same adapter interfaces with evaluated Odia ASR and rice vision, validate on consented Odisha field data with agronomists, then pilot through a KVK. The current prototype proves the safe product loop without overstating readiness.

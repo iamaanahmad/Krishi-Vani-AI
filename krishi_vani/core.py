@@ -78,6 +78,7 @@ class Evidence:
     url: str
     excerpt_en: str
     excerpt_or: str
+    topic: str = "rice_brown_spot"
 
 
 class Generator(Protocol):
@@ -189,7 +190,7 @@ class Retriever:
     def retrieve(self, vision: VisionResult) -> list[Evidence]:
         if vision.label != "possible_rice_brown_spot":
             return []
-        return self.documents[:2]
+        return [doc for doc in self.documents if doc.topic == "rice_brown_spot"]
 
 
 class DeterministicGroundedGenerator:
@@ -378,6 +379,8 @@ class TriagePipeline:
             return {
                 "status": "escalate",
                 "confidence": combined_confidence,
+                "speech_confidence": speech.confidence,
+                "vision_confidence": vision.confidence,
                 "transcript_or": speech.transcript_or,
                 "transcript_en": speech.transcript_en,
                 "summary_or": "ଏହି ଫଟୋ ଓ କଣ୍ଠସ୍ୱରରୁ ଭରସାଯୋଗ୍ୟ ନିଷ୍କର୍ଷ ମିଳୁନାହିଁ।",
@@ -414,6 +417,8 @@ class TriagePipeline:
         result = {
             "status": "supported",
             "confidence": combined_confidence,
+            "speech_confidence": speech.confidence,
+            "vision_confidence": vision.confidence,
             "transcript_or": speech.transcript_or,
             "transcript_en": speech.transcript_en,
             **generation,

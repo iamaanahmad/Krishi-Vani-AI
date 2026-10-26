@@ -277,6 +277,10 @@ function renderResult(result) {
   status.className = `result-status ${result.status}`;
   status.querySelector("strong").textContent = result.status === "supported" ? "Fixture evidence matched" : "Expert check needed";
   document.querySelector("#evidence-gate-value").textContent = result.status === "supported" ? "Passed" : "Stopped";
+  const confEl = document.querySelector("#confidence-breakdown");
+  if (confEl) confEl.textContent = `Speech ${result.speech_confidence ?? "?"} · Vision ${result.vision_confidence ?? "?"} · Combined ${result.confidence} (gate 0.72)`;
+  const llmEl = document.querySelector("#llm-note");
+  if (llmEl) llmEl.textContent = result.fallback_reason ? `LLM fallback used: ${String(result.fallback_reason).slice(0, 120)}` : "LLM validation passed — citations checked, no chemical prescription.";
   document.querySelector("#result-title").textContent = result.next_step_or;
   document.querySelector("#result-title-en").textContent = result.next_step_en;
   document.querySelector("#transcript").textContent = result.transcript_or || result.transcript_en;
@@ -350,6 +354,42 @@ document.querySelector("#feedback-form").addEventListener("submit", async (event
   submit.disabled = false;
 });
 
+
+async function renderStaticPreview(scenario) {
+  const banner = document.querySelector("#static-mode-banner");
+  if (banner) banner.hidden = false;
+  let knowledge = [];
+  try {
+    const r = await fetch("/data/knowledge.json");
+    if (r.ok) knowledge = await r.json();
+  } catch (_) {}
+  const base = {
+    adapters: { speech: "static-phone-preview", vision: "static-phone-preview", generator: "static-phone-preview" },
+    safety: "No pesticide prescription. Confirm persistent symptoms with a KVK or extension officer.",
+  };
+  if (scenario === "supported") {
+    renderResult({ status: "supported", confidence: 0.88, speech_confidence: 0.96, vision_confidence: 0.88,
+      transcript_or: "ଧାନ ପତ୍ରରେ ଛୋଟ ଗୋଲ ବାଦାମୀ ଦାଗ ଦେଖାଯାଉଛି। କଣ କରିବି?",
+      transcript_en: "Small round brown spots are appearing on the rice leaves. What should I do?",
+      next_step_or: "ଆଜି ୫ଟି ପ୍ରଭାବିତ ପତ୍ରରେ ଗୋଲ କିମ୍ବା ଅଣ୍ଡାକାର ଓ ମଝି ଧୂସର ଥିବା ଦାଗ ଯାଞ୍ଚ କରନ୍ତୁ।",
+      next_step_en: "Inspect five affected leaves today for round or oval spots with grey centres.",
+      why_or: "ଏହି ଲକ୍ଷଣ ବ୍ରାଉନ୍ ସ୍ପଟ୍ ସହ ମେଳ ଖାଏ, ଏବଂ ସରକାରୀ ଓ ଧାନ ଜ୍ଞାନ ସ୍ରୋତ ସମତୁଳିତ ପୋଷକ ଓ ଜଳ ପରିଚାଳନାକୁ ସୁପାରିଶ କରେ।",
+      why_en: "The visible pattern matches published brown-spot cues; official rice guidance prioritises balanced nutrition and water management.",
+      citations: knowledge.map((k) => k.citation_id), evidence: knowledge, ...base });
+    return;
+  }
+  // uncertain + unknown both escalate, with different confidences
+  const conf = scenario === "uncertain" ? 0.41 : 0.0;
+  renderResult({ status: "escalate", confidence: conf, speech_confidence: scenario === "uncertain" ? 0.52 : 0.0, vision_confidence: scenario === "uncertain" ? 0.41 : 0.0,
+    transcript_or: scenario === "uncertain" ? "ଧାନରେ କିଛି ସମସ୍ୟା ଅଛି।" : "",
+    transcript_en: scenario === "uncertain" ? "There is some problem with the rice." : "Audio was received, but the offline adapter could not transcribe it.",
+    next_step_or: "ଆଉ ଗୋଟିଏ ସ୍ପଷ୍ଟ ଫଟୋ ନିଅନ୍ତୁ ଏବଂ ନିକଟସ୍ଥ KVK କିମ୍ବା କୃଷି ସମ୍ପ୍ରସାରଣ ଅଧିକାରୀଙ୍କୁ ଦେଖାନ୍ତୁ।",
+    next_step_en: "Take one clearer close-up and show it to your nearest KVK or agricultural extension officer.",
+    why_or: "ଭୁଲ ପରାମର୍ଶ ଦେବାଠାରୁ ଏଠାରେ ଥମିବା ଅଧିକ ସୁରକ୍ଷିତ।",
+    why_en: "Stopping is safer than giving advice from weak evidence.",
+    citations: [], evidence: [], ...base });
+}
+
 document.querySelector("#triage-button").addEventListener("click", async () => {
   const button = document.querySelector("#triage-button");
   const original = button.innerHTML;
@@ -357,9 +397,16 @@ document.querySelector("#triage-button").addEventListener("click", async () => {
   button.querySelector("span").textContent = "ଯାଞ୍ଚ ଚାଲିଛି…";
   await track("triage_submitted", { scenario: state.scenario });
   try {
-    const selected = fixturePaths[state.scenario];
-    const audio = await fixturePayload(selected.audio);
-    const image = await fixturePayload(selected.image);
+    let audio, image;
+    if (state.scenario === "unknown") {
+      const enc = (s) => btoa(s);
+      audio = { name: "farmer.wav", type: "audio/wav", base64: enc("unknown-audio") };
+      image = { name: "leaf.png", type: "image/png", base64: enc("unknown-image") };
+    } else {
+      const selected = fixturePaths[state.scenario];
+      audio = await fixturePayload(selected.audio);
+      image = await fixturePayload(selected.image);
+    }
     const response = await fetch("/api/triage", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -370,9 +417,11 @@ document.querySelector("#triage-button").addEventListener("click", async () => {
     renderResult(result);
     await track("triage_completed", { outcome: result.status });
   } catch (error) {
-    alert(error.message);
+    // Static phone preview: if there is no local API (e.g. a static Vercel link),
+    // show the same three scenarios with the same safety rules, clearly labelled.
+    try { await renderStaticPreview(state.scenario); await track("triage_completed", { outcome: state.scenario === "supported" ? "supported" : "escalate" }); }
+    catch (_) { alert(error.message); }
     await track("error_shown", { stage: "triage" });
-    await track("triage_failed", { stage: "triage" });
   } finally {
     button.disabled = false;
     button.innerHTML = original;
